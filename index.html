@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Runner Dashboard</title>
+    <script>
+      // Paint the right background before anything renders (no white flash in dark mode).
+      (function () {
+        var dark = matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.style.backgroundColor = dark ? "#1c1c1e" : "#f6f6f4";
+      })();
+    </script>
+  </head>
+  <body spellcheck="false">
+    <div id="root"></div>
+    <script>
+      // WKWebView text-input defaults that don't inherit: no autocorrect/capitalize/complete.
+      (function () {
+        var ATTRS = { autocorrect: "off", autocapitalize: "off", autocomplete: "off" };
+        function patch(el) {
+          for (var k in ATTRS) if (!el.hasAttribute(k)) el.setAttribute(k, ATTRS[k]);
+        }
+        function patchAll(root) {
+          root.querySelectorAll("input, textarea, [contenteditable]").forEach(patch);
+        }
+        patchAll(document);
+        new MutationObserver(function (ms) {
+          for (var i = 0; i < ms.length; i++) {
+            var added = ms[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+              var n = added[j];
+              if (n.nodeType !== 1) continue;
+              if (n.matches && n.matches("input, textarea, [contenteditable]")) patch(n);
+              if (n.querySelectorAll) patchAll(n);
+            }
+          }
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/* Semantic tokens; light first, dark via prefers-color-scheme (follows macOS). */
+:root {
+  --bg: oklch(0.99 0.002 260);
+  --sidebar: oklch(0.975 0.003 260);
+  --card: #ffffff;
+  --card-sunken: oklch(0.955 0.004 260);
+  --hover: oklch(0.955 0.004 260 / 0.6);
+  --selected: oklch(0.935 0.006 260);
+  --border: oklch(0.915 0.005 260);
+  --border-strong: oklch(0.85 0.008 260);
+  --text: oklch(0.21 0.012 265);
+  --text-2: oklch(0.52 0.014 262);
+  --text-3: oklch(0.60 0.012 262);
+  --accent: oklch(0.54 0.2 262);
+  --busy: oklch(0.54 0.2 262);
+  --ok: oklch(0.66 0.15 155);
+  --ok-ink: oklch(0.45 0.12 155);
+  --warn: oklch(0.60 0.13 65);
+  --bad: oklch(0.58 0.21 25);
+  --muted: oklch(0.70 0.01 262);
+  --meter: oklch(0.38 0.012 265);
+  --info: #6b62d9;
+  --demo-bg: #fff4dc;
+  --demo-text: #7a5207;
+  --demo-border: #f0d9a6;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --sidebar: #232325;
+    --card: #2a2a2d;
+    --card-sunken: #242426;
+    --hover: rgba(255, 255, 255, 0.05);
+    --selected: rgba(255, 255, 255, 0.09);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --text: #ececee;
+    --text-2: #a3a3a8;
+    --text-3: #6f6f75;
+    --accent: #5b93f5;
+    --busy: #5b93f5;
+    --ok: #47b871;
+    --ok-ink: #74d799;
+    --warn: #e0a03a;
+    --bad: #ec6a5e;
+    --muted: #77777d;
+    --meter: #b4b8c0;
+    --info: #9a93f0;
+    --demo-bg: #3a2f17;
+    --demo-text: #f3cf86;
+    --demo-border: #57461f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
+  --color-card: var(--card);
+  --color-sunken: var(--card-sunken);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-busy: var(--busy);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-muted: var(--muted);
+  --color-demo-bg: var(--demo-bg);
+  --color-demo-text: var(--demo-text);
+  --color-demo-border: var(--demo-border);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html {
+  font-size: 16px;
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* Desktop, not web: default cursor and no text selection except where useful. */
+*,
+button {
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.selectable,
+.selectable * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.copy-value,
+.copy-value * {
+  cursor: copy;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thin overlay-style scrollbars. */
+.scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Sidebar tree connector. */
+.tree-child {
+  position: relative;
+}
+.tree-child::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--border-strong);
+}
+
+/* Layered so Tailwind width/size utilities can override it. */
+@layer components {
+  .panel {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .input {
+    width: 100%;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--card);
+    color: var(--text);
+    font: inherit;
+    outline: none;
+  }
+  .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+}
+
+code,
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}

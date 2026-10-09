@@ -1,0 +1,48 @@
+[workspace]
+resolver = "3"
+members = ["crates/fleet", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "UNLICENSED"
+rust-version = "1.93"
+
+# Enforced by `cargo clippy --workspace --all-targets -- -D warnings`; see
+# .agents/skills/rust-practices.
+[workspace.lints.rust]
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_sign_loss = "warn"
+implicit_clone = "warn"
+manual_let_else = "warn"
+match_wildcard_for_single_variants = "warn"
+redundant_closure_for_method_calls = "warn"
+undocumented_unsafe_blocks = "warn"
+uninlined_format_args = "warn"
+unwrap_used = "warn"
+
+[workspace.dependencies]
+fleet = { path = "crates/fleet" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = { version = "=1.2.2", features = ["chrono04"] }
+thiserror = "2"
+chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
+tokio = { version = "1", features = ["macros", "rt", "time", "sync", "process", "fs", "net", "io-util"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ts-rs = { version = "12", features = ["chrono-impl", "serde-compat", "no-serde-warnings"] }
+tempfile = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

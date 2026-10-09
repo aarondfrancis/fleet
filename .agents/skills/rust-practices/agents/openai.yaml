@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rust Practices"
+  short_description: "Apply practical Rust coding and review guidelines"
+  default_prompt: "Use $rust-practices to implement or review this Rust change."

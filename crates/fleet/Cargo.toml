@@ -1,0 +1,41 @@
+[package]
+name = "fleet"
+description = "Runner Dashboard core: GitHub, Tailscale and SSH data collection, the derived fleet view, and desired-state runner management"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+tracing.workspace = true
+ts-rs.workspace = true
+futures = "0.3"
+url = "2"
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "query"] }
+tempfile.workspace = true
+base64 = "0.22"
+toml = "0.8"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_IO"] }
+
+[features]
+# Fakes for GitHub, the worker hosts and subprocesses, shared by this crate's unit and
+# integration tests (enabled for them by the dev-dependency on this crate).
+test-support = []
+
+[dev-dependencies]
+fleet = { path = ".", features = ["test-support"] }
+tower = { version = "0.5", features = ["util"] }
+
+[lints]
+workspace = true

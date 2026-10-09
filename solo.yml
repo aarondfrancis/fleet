@@ -1,0 +1,21 @@
+name: Runner Dashboard
+icon: src-tauri/icons/128x128.png
+processes:
+  Dev app:
+    command: pnpm tauri dev
+    auto_start: false
+  Build app:
+    command: pnpm tauri build
+    auto_start: false
+  Install app to /Applications:
+    command: sh scripts/install-app.sh
+    auto_start: false
+  Fleet parity (read-only):
+    command: scripts/fleet-parity.sh
+    auto_start: false
+  Tests:
+    command: cargo fmt --all --check && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && pnpm typecheck && pnpm test
+    auto_start: false
+  Browser preview:
+    command: pnpm dev
+    auto_start: false

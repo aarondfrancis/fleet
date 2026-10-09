@@ -1,0 +1,4 @@
+# `unwrap_used` warns workspace-wide (see Cargo.toml), which fails the `-D warnings`
+# clippy run; unit tests may unwrap.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

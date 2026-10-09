@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3f47"/>
+      <stop offset="1" stop-color="#1d2025"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f4f2"/>
+      <stop offset="1" stop-color="#d9dad6"/>
+    </linearGradient>
+  </defs>
+  <!-- ~10% transparent margin for the macOS icon grid -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#bg)"/>
+  <g>
+    <rect x="236" y="300" width="552" height="112" rx="30" fill="url(#bar)"/>
+    <circle cx="300" cy="356" r="22" fill="#34a853"/>
+    <rect x="352" y="346" width="200" height="20" rx="10" fill="#9a9c97"/>
+
+    <rect x="236" y="456" width="552" height="112" rx="30" fill="url(#bar)"/>
+    <circle cx="300" cy="512" r="22" fill="#2f7cf6"/>
+    <rect x="352" y="502" width="280" height="20" rx="10" fill="#9a9c97"/>
+
+    <rect x="236" y="612" width="552" height="112" rx="30" fill="url(#bar)"/>
+    <circle cx="300" cy="668" r="22" fill="#34a853"/>
+    <rect x="352" y="658" width="150" height="20" rx="10" fill="#9a9c97"/>
+  </g>
+</svg>

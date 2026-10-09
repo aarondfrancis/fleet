@@ -1,0 +1,85 @@
+# Fictional fleet shared by the documentation and tests.
+# Copy to fleet.toml and replace the organization, SSH targets and runner details.
+# fleet.toml is ignored by Git. Tokens and passwords never belong in it: GitHub
+# tokens live in the macOS Keychain, and passwords are entered for each change.
+
+[organization]
+name = "acme"
+url = "https://github.com/acme"
+runner_group = "Acme trusted builders"
+
+[[hosts]]
+id = "studio"
+platform = "darwin-arm64"
+ssh = "studio"
+root = "~/gh-runners/acme"
+service_mode = "launchagent"
+labels = ["fleet", "macos-build", "xcode", "host-studio"]
+# One GUI runner per desktop; keep build work on a separate runner.
+# Retain the legacy runner until its replacement is online, idle and configured.
+runners = [
+  { name = "studio-01", directory = "runner-01", labels = ["macos-e2e"], exclude_labels = ["macos-build"], replaces = { name = "Legacy-Studio", directory = "~/actions-runner" } },
+  { name = "studio-02", directory = "runner-02" },
+]
+
+[[hosts]]
+id = "mini"
+platform = "darwin-arm64"
+ssh = "builder@mac-mini.example.ts.net"
+ssh_transport = "tailscale"
+root = "~/gh-runners/acme"
+service_mode = "launchagent"
+labels = ["fleet", "macos-build", "xcode", "host-mini"]
+runners = [{ name = "mini-01", directory = "runner-01" }]
+
+[[hosts]]
+id = "mac-build"
+platform = "darwin-arm64"
+ssh = "mac-build"
+root = "~/gh-runners/acme"
+service_mode = "launchagent"
+labels = ["fleet", "macos-build", "xcode", "host-mac-build"]
+runners = [{ name = "mac-build-01", directory = "runner-01" }]
+
+[[hosts]]
+id = "linux"
+platform = "linux-x64"
+ssh = "builder@linux.example.ts.net"
+ssh_transport = "tailscale"
+root = "~/gh-runners/acme"
+service_mode = "systemd"
+labels = ["fleet", "linux-build", "ubuntu", "host-linux"]
+runners = [{ name = "linux-01", directory = "runner-01" }]
+
+[[hosts]]
+id = "windows"
+platform = "windows-arm64"
+ssh = "win-builder"
+root = "C:\\gh-runners\\acme"
+service_mode = "windows-service"
+service_account = ".\\builder"
+labels = ["fleet", "windows-build", "tauri", "host-windows"]
+runners = [
+  { name = "windows-01", directory = "runner-01", labels = ["windows-e2e"], replaces = { name = "old-windows-01", directory = "C:\\actions-runner", repository = "acme/desktop" } },
+  # A decommissioned entry reserves its name and path until deliberately removed.
+  { name = "windows-02", directory = "runner-02", decommission = true },
+]
+
+[[hosts]]
+id = "windows-gui"
+platform = "windows-x64"
+ssh = "windows-gui"
+root = "C:\\gh-runners\\acme"
+service_mode = "windows-logon"
+service_account = ".\\builder"
+labels = ["fleet", "windows-build", "host-windows-gui"]
+runners = [{ name = "windows-gui-01", directory = "runner-01", labels = ["windows-e2e-x64"] }]
+
+[[hosts]]
+id = "linux-canary"
+platform = "linux-x64"
+ssh = "linux-canary"
+root = "~/gh-runners/acme"
+service_mode = "systemd"
+labels = ["fleet", "linux-experimental", "arch", "host-linux-canary"]
+runners = [{ name = "linux-canary-01", directory = "runner-01" }]

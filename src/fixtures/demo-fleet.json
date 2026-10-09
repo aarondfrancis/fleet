@@ -1,0 +1,2059 @@
+{
+  "generatedAt": "2026-10-03T12:00:00Z",
+  "source": "demo",
+  "summary": {
+    "machines": 5,
+    "machinesConnected": 2,
+    "runners": 9,
+    "runnersOnline": 6,
+    "runnersBusy": 2,
+    "runnersOffline": 1,
+    "runnersUnknown": 2,
+    "queuedJobs": 2,
+    "attention": 7
+  },
+  "issues": [
+    {
+      "id": "alert:inv:mac-mini-02:disk",
+      "category": "alert",
+      "title": "mac-mini-02: low disk space",
+      "detail": "/: 5.7% free (13.0 GiB of 228.2 GiB).",
+      "machineId": "ts:nMini",
+      "runnerKey": null,
+      "stale": false,
+      "muted": false,
+      "fix": null
+    },
+    {
+      "id": "ts:nLinux:check",
+      "category": "inventory",
+      "title": "build-linux-01 couldn't be checked",
+      "detail": "SSH connection timed out.",
+      "machineId": "ts:nLinux",
+      "runnerKey": null,
+      "stale": false,
+      "muted": false,
+      "fix": null
+    },
+    {
+      "id": "ts:nMini:changes",
+      "category": "inventory",
+      "title": "mac-mini-02: runner plan needs attention",
+      "detail": "mini-02: add macos-build; remove old-label",
+      "machineId": "ts:nMini",
+      "runnerKey": null,
+      "stale": false,
+      "muted": false,
+      "fix": null
+    },
+    {
+      "id": "ts:nNew:check",
+      "category": "inventory",
+      "title": "mac-mini-03 couldn't be checked",
+      "detail": "SSH permission denied. Check the host's SSH login and tailnet access.",
+      "machineId": "ts:nNew",
+      "runnerKey": null,
+      "stale": false,
+      "muted": false,
+      "fix": null
+    },
+    {
+      "id": "ts:nStudio:changes",
+      "category": "inventory",
+      "title": "studio: runner plan needs attention",
+      "detail": "Studio-Old-2: replacement studio-2 is healthy; exact directory ~/actions-runner-2 will be preserved",
+      "machineId": "ts:nStudio",
+      "runnerKey": null,
+      "stale": false,
+      "muted": false,
+      "fix": null
+    },
+    {
+      "id": "ts:nWin:check",
+      "category": "inventory",
+      "title": "win-builder couldn't be checked",
+      "detail": "Host unreachable.",
+      "machineId": "ts:nWin",
+      "runnerKey": null,
+      "stale": false,
+      "muted": false,
+      "fix": null
+    },
+    {
+      "id": "queue:acme-demo:9004",
+      "category": "queue",
+      "title": "train-small: no compatible online runner observed",
+      "detail": "No observed runner has labels self-hosted, gpu, a100",
+      "machineId": null,
+      "runnerKey": null,
+      "stale": false,
+      "muted": false,
+      "fix": null
+    }
+  ],
+  "machines": [
+    {
+      "id": "ts:nLinux",
+      "displayName": "build-linux-01",
+      "description": null,
+      "host": "builder@build-linux-01.demo.ts.net",
+      "os": "linux",
+      "osVersion": "Ubuntu 24.04",
+      "tailnet": {
+        "nodeId": "nLinux",
+        "hostname": "build-linux-01",
+        "dnsName": "build-linux-01.demo.ts.net",
+        "os": "linux",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": true,
+        "lastSeen": null,
+        "tags": [],
+        "sshHostKeys": [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoHostKeyForPreviewOnly"
+        ]
+      },
+      "connection": {
+        "kind": "stale",
+        "checkedAt": "2026-10-03T11:54:00Z",
+        "reason": "SSH connection timed out."
+      },
+      "health": {
+        "asOf": "2026-10-03T11:54:00Z",
+        "stale": true,
+        "cpuPercent": 12.0,
+        "loadAverage": [
+          1.2,
+          1.0,
+          0.8571428571428571
+        ],
+        "logicalCores": 12,
+        "memoryTotalBytes": 128000000000,
+        "memoryAvailableBytes": 96000000000,
+        "disks": [
+          {
+            "mountPoint": "/",
+            "totalBytes": 1800000000000,
+            "availableBytes": 1250000000000
+          }
+        ],
+        "uptimeSecs": 792000,
+        "bootId": "demo-boot-session"
+      },
+      "diagnostics": {
+        "asOf": "2026-10-03T11:54:00Z",
+        "stale": true,
+        "checks": [
+          {
+            "id": "tailscale-install",
+            "group": "network",
+            "title": "Tailscale installation",
+            "status": "info",
+            "value": "CLI + daemon",
+            "detail": "CLI: /usr/local/bin/tailscale. GUI installations can also include a CLI."
+          },
+          {
+            "id": "tailscale-version",
+            "group": "network",
+            "title": "Tailscale version",
+            "status": "info",
+            "value": "1.90.0",
+            "detail": "Version reported by the local Tailscale daemon."
+          },
+          {
+            "id": "tailscale-state",
+            "group": "network",
+            "title": "Tailscale connection",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Local daemon state from tailscale status."
+          },
+          {
+            "id": "tailscale-ssh",
+            "group": "network",
+            "title": "Tailscale SSH",
+            "status": "pass",
+            "value": "Enabled",
+            "detail": "The local RunSSH preference is enabled. Tailnet access rules still control who can connect."
+          },
+          {
+            "id": "tailscale-startup",
+            "group": "network",
+            "title": "Tailscale startup",
+            "status": "pass",
+            "value": "Starts at boot",
+            "detail": "Native service startup: enabled."
+          },
+          {
+            "id": "power-sleep",
+            "group": "power",
+            "title": "System sleep protection",
+            "status": "pass",
+            "value": "Blocked by systemd",
+            "detail": "sleep: masked; suspend: unknown; hibernate: unknown; hybrid-sleep: unknown; suspend-then-hibernate: unknown. Unmasked targets do not prove automatic sleep is enabled; desktop and logind policies can differ."
+          },
+          {
+            "id": "power-idle",
+            "group": "power",
+            "title": "Logind idle action",
+            "status": "pass",
+            "value": "ignore",
+            "detail": "Configuration on disk, including drop-ins. A desktop environment can have a separate policy; changes may need a service reload."
+          },
+          {
+            "id": "ssh-identity",
+            "group": "system",
+            "title": "SSH account",
+            "status": "info",
+            "value": "ci",
+            "detail": "Account used for this read-only inspection."
+          },
+          {
+            "id": "architecture",
+            "group": "system",
+            "title": "Architecture",
+            "status": "info",
+            "value": "arm64",
+            "detail": "Architecture reported by the operating system."
+          },
+          {
+            "id": "disk-space",
+            "group": "system",
+            "title": "Disk space",
+            "status": "pass",
+            "value": "At least 10% free",
+            "detail": "/: 1164.2 GiB free of 1676.4 GiB"
+          },
+          {
+            "id": "runner-startup",
+            "group": "runners",
+            "title": "Runner startup",
+            "status": "info",
+            "value": "System services",
+            "detail": "The inventory configures runners as native system services. Service state is checked separately below."
+          },
+          {
+            "id": "runner:linux-01-a",
+            "group": "runners",
+            "title": "linux-01-a",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Service: active · version: 2.329.0 · ~/gh-runners/acme-demo/runner-01"
+          }
+        ]
+      },
+      "monitoring": {
+        "machineKey": "inv:build-linux-01",
+        "maintenanceUntil": null,
+        "alerts": [],
+        "events": [
+          {
+            "id": "00000000000000000001",
+            "machineKey": "inv:build-linux-01",
+            "machineName": "build-linux-01",
+            "at": "2026-10-03T10:00:00Z",
+            "kind": "monitoringStarted",
+            "detail": "Started observing this machine. Earlier events are not known."
+          }
+        ]
+      },
+      "runners": [
+        {
+          "key": "gh:acme-demo:301",
+          "name": "linux-01-a",
+          "org": "acme-demo",
+          "machineId": "ts:nLinux",
+          "installed": "unknown",
+          "connected": "yes",
+          "activity": {
+            "kind": "idle"
+          },
+          "github": {
+            "id": 301,
+            "status": "online",
+            "busy": false,
+            "labels": [
+              "self-hosted",
+              "Linux",
+              "X64",
+              "docker"
+            ],
+            "os": "Linux",
+            "version": "2.329.0",
+            "ephemeral": false,
+            "asOf": "2026-10-03T11:59:51Z",
+            "stale": false
+          },
+          "local": {
+            "installDir": "~/gh-runners/acme-demo/runner-01",
+            "configured": true,
+            "serviceState": "active",
+            "version": "2.329.0",
+            "asOf": "2026-10-03T11:56:00Z",
+            "stale": true
+          },
+          "currentJob": null,
+          "warnings": [],
+          "desired": {
+            "hostId": "build-linux-01",
+            "role": {
+              "kind": "declared"
+            },
+            "desiredLabels": [
+              "fleet",
+              "linux-build",
+              "ubuntu"
+            ],
+            "status": {
+              "runner": "linux-01-a",
+              "host": "build-linux-01",
+              "githubState": "online",
+              "serviceState": "unknown",
+              "busy": false,
+              "version": "2.329.0",
+              "drift": "host unavailable",
+              "desired": true
+            },
+            "plan": [
+              {
+                "action": "inspect",
+                "apply": false,
+                "host": "build-linux-01",
+                "runner": "linux-01-a",
+                "reason": "host unavailable: SSH connection timed out.",
+                "command": null,
+                "blocked": true
+              }
+            ]
+          }
+        },
+        {
+          "key": "gh:acme-demo:302",
+          "name": "linux-01-b",
+          "org": "acme-demo",
+          "machineId": "ts:nLinux",
+          "installed": "unknown",
+          "connected": "yes",
+          "activity": {
+            "kind": "idle"
+          },
+          "github": {
+            "id": 302,
+            "status": "online",
+            "busy": false,
+            "labels": [
+              "self-hosted",
+              "Linux",
+              "X64",
+              "docker"
+            ],
+            "os": "Linux",
+            "version": "2.329.0",
+            "ephemeral": false,
+            "asOf": "2026-10-03T11:59:51Z",
+            "stale": false
+          },
+          "local": {
+            "installDir": "~/gh-runners/acme-demo/runner-02",
+            "configured": true,
+            "serviceState": "active",
+            "version": "2.329.0",
+            "asOf": "2026-10-03T11:56:00Z",
+            "stale": true
+          },
+          "currentJob": null,
+          "warnings": [],
+          "desired": {
+            "hostId": "build-linux-01",
+            "role": {
+              "kind": "decommission"
+            },
+            "desiredLabels": [
+              "fleet",
+              "linux-build",
+              "ubuntu"
+            ],
+            "status": {
+              "runner": "linux-01-b",
+              "host": "build-linux-01",
+              "githubState": "online",
+              "serviceState": "unknown",
+              "busy": false,
+              "version": "2.329.0",
+              "drift": "decommission state unavailable",
+              "desired": false
+            },
+            "plan": [
+              {
+                "action": "inspect",
+                "apply": false,
+                "host": "build-linux-01",
+                "runner": "linux-01-b",
+                "reason": "host unavailable: SSH connection timed out.",
+                "command": null,
+                "blocked": true
+              }
+            ]
+          }
+        }
+      ],
+      "warnings": [],
+      "desired": {
+        "host": {
+          "id": "build-linux-01",
+          "platform": "linux-x64",
+          "sshTarget": "builder@build-linux-01.demo.ts.net",
+          "sshSetting": "builder@build-linux-01.demo.ts.net",
+          "root": "~/gh-runners/acme-demo",
+          "serviceMode": "systemd",
+          "labels": [
+            "fleet",
+            "linux-build",
+            "ubuntu"
+          ],
+          "runners": [
+            {
+              "name": "linux-01-a",
+              "directory": "runner-01",
+              "labels": [],
+              "excludeLabels": [],
+              "replaces": null,
+              "decommission": false
+            },
+            {
+              "name": "linux-01-b",
+              "directory": "runner-02",
+              "labels": [],
+              "excludeLabels": [],
+              "replaces": null,
+              "decommission": true
+            }
+          ],
+          "serviceAccount": null,
+          "enabled": true,
+          "sshTransport": "tailscale"
+        },
+        "plan": [
+          {
+            "action": "inspect",
+            "apply": false,
+            "host": "build-linux-01",
+            "runner": "linux-01-a",
+            "reason": "host unavailable: SSH connection timed out.",
+            "command": null,
+            "blocked": true
+          },
+          {
+            "action": "inspect",
+            "apply": false,
+            "host": "build-linux-01",
+            "runner": "linux-01-b",
+            "reason": "host unavailable: SSH connection timed out.",
+            "command": null,
+            "blocked": true
+          }
+        ],
+        "pendingChanges": 0,
+        "error": "SSH connection timed out.",
+        "checkedAt": "2026-10-03T11:56:00Z",
+        "checks": [],
+        "checksAt": null
+      }
+    },
+    {
+      "id": "ts:nMini",
+      "displayName": "mac-mini-02",
+      "description": null,
+      "host": "mac-mini-02",
+      "os": "macos",
+      "osVersion": "macOS 15.6",
+      "tailnet": {
+        "nodeId": "nMini",
+        "hostname": "mac-mini-02",
+        "dnsName": "mac-mini-02.demo.ts.net",
+        "os": "macOS",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": true,
+        "lastSeen": null,
+        "tags": [],
+        "sshHostKeys": []
+      },
+      "connection": {
+        "kind": "connected",
+        "checkedAt": "2026-10-03T11:59:56Z"
+      },
+      "health": {
+        "asOf": "2026-10-03T11:59:56Z",
+        "stale": false,
+        "cpuPercent": 71.0,
+        "loadAverage": [
+          7.1,
+          5.916666666666667,
+          5.071428571428571
+        ],
+        "logicalCores": 12,
+        "memoryTotalBytes": 16000000000,
+        "memoryAvailableBytes": 3000000000,
+        "disks": [
+          {
+            "mountPoint": "/",
+            "totalBytes": 245000000000,
+            "availableBytes": 14000000000
+          }
+        ],
+        "uptimeSecs": 792000,
+        "bootId": "demo-boot-session"
+      },
+      "diagnostics": {
+        "asOf": "2026-10-03T11:59:56Z",
+        "stale": false,
+        "checks": [
+          {
+            "id": "tailscale-install",
+            "group": "network",
+            "title": "Tailscale installation",
+            "status": "info",
+            "value": "CLI + daemon",
+            "detail": "CLI: /usr/local/bin/tailscale. GUI installations can also include a CLI."
+          },
+          {
+            "id": "tailscale-version",
+            "group": "network",
+            "title": "Tailscale version",
+            "status": "info",
+            "value": "1.90.0",
+            "detail": "Version reported by the local Tailscale daemon."
+          },
+          {
+            "id": "tailscale-state",
+            "group": "network",
+            "title": "Tailscale connection",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Local daemon state from tailscale status."
+          },
+          {
+            "id": "tailscale-ssh",
+            "group": "network",
+            "title": "Tailscale SSH",
+            "status": "pass",
+            "value": "Enabled",
+            "detail": "The local RunSSH preference is enabled. Tailnet access rules still control who can connect."
+          },
+          {
+            "id": "power-sleep",
+            "group": "power",
+            "title": "Sleep on AC power",
+            "status": "pass",
+            "value": "Never",
+            "detail": "Automatic sleep interrupts remote access and jobs. This timeout does not cover lid actions or every standby policy."
+          },
+          {
+            "id": "power-displaysleep",
+            "group": "power",
+            "title": "Display off on AC power",
+            "status": "info",
+            "value": "After 10 minutes",
+            "detail": "Display sleep is separate from system sleep; Modern Standby devices may also change connectivity when the display turns off."
+          },
+          {
+            "id": "power-recovery",
+            "group": "power",
+            "title": "Restart after power failure",
+            "status": "pass",
+            "value": "Enabled",
+            "detail": "AC autorestart setting from pmset. Availability depends on the Mac model."
+          },
+          {
+            "id": "power-wake",
+            "group": "power",
+            "title": "Wake for network access",
+            "status": "info",
+            "value": "Enabled",
+            "detail": "Wake-on-network setting from pmset. This does not guarantee wake through Tailscale."
+          },
+          {
+            "id": "ssh-identity",
+            "group": "system",
+            "title": "SSH account",
+            "status": "info",
+            "value": "ci",
+            "detail": "Account used for this read-only inspection."
+          },
+          {
+            "id": "architecture",
+            "group": "system",
+            "title": "Architecture",
+            "status": "info",
+            "value": "arm64",
+            "detail": "Architecture reported by the operating system."
+          },
+          {
+            "id": "disk-space",
+            "group": "system",
+            "title": "Disk space",
+            "status": "warn",
+            "value": "Less than 10% free",
+            "detail": "/: 13.0 GiB free of 228.2 GiB"
+          },
+          {
+            "id": "runner-startup",
+            "group": "runners",
+            "title": "Runner startup",
+            "status": "info",
+            "value": "User login required",
+            "detail": "Configured as per-user LaunchAgents. Console user: ci. A reboot may require login before runners start."
+          },
+          {
+            "id": "runner:mini-02",
+            "group": "runners",
+            "title": "mini-02",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Service: active · version: 2.329.0 · ~/gh-runners/acme-demo/runner-01"
+          }
+        ]
+      },
+      "monitoring": {
+        "machineKey": "inv:mac-mini-02",
+        "maintenanceUntil": null,
+        "alerts": [
+          {
+            "id": "inv:mac-mini-02:disk",
+            "machineKey": "inv:mac-mini-02",
+            "machineName": "mac-mini-02",
+            "kind": "lowDisk",
+            "since": "2026-10-03T11:47:00Z",
+            "detail": "/: 5.7% free (13.0 GiB of 228.2 GiB).",
+            "stale": false,
+            "muted": false
+          }
+        ],
+        "events": [
+          {
+            "id": "00000000000000000010",
+            "machineKey": "inv:mac-mini-02",
+            "machineName": "mac-mini-02",
+            "at": "2026-10-03T11:48:00Z",
+            "kind": "lowDisk",
+            "detail": "/: 5.7% free (13.0 GiB of 228.2 GiB)."
+          },
+          {
+            "id": "00000000000000000002",
+            "machineKey": "inv:mac-mini-02",
+            "machineName": "mac-mini-02",
+            "at": "2026-10-03T10:00:00Z",
+            "kind": "monitoringStarted",
+            "detail": "Started observing this machine. Earlier events are not known."
+          }
+        ]
+      },
+      "runners": [
+        {
+          "key": "gh:acme-demo:201",
+          "name": "mini-02",
+          "org": "acme-demo",
+          "machineId": "ts:nMini",
+          "installed": "yes",
+          "connected": "yes",
+          "activity": {
+            "kind": "busy",
+            "since": "2026-10-03T11:56:55Z"
+          },
+          "github": {
+            "id": 201,
+            "status": "online",
+            "busy": true,
+            "labels": [
+              "self-hosted",
+              "macOS",
+              "ARM64"
+            ],
+            "os": "macOS",
+            "version": "2.329.0",
+            "ephemeral": false,
+            "asOf": "2026-10-03T11:59:51Z",
+            "stale": false
+          },
+          "local": {
+            "installDir": "~/gh-runners/acme-demo/runner-01",
+            "configured": true,
+            "serviceState": "active",
+            "version": "2.329.0",
+            "asOf": "2026-10-03T11:59:56Z",
+            "stale": false
+          },
+          "currentJob": {
+            "id": 9002,
+            "name": "test-unit",
+            "workflowName": "CI",
+            "repo": "acme-demo/web",
+            "branch": "main",
+            "startedAt": "2026-10-03T11:56:55Z",
+            "htmlUrl": "https://github.com/acme-demo/web/actions/runs/90020/job/9002",
+            "labels": [
+              "self-hosted",
+              "macOS"
+            ]
+          },
+          "warnings": [],
+          "desired": {
+            "hostId": "mac-mini-02",
+            "role": {
+              "kind": "declared"
+            },
+            "desiredLabels": [
+              "fleet",
+              "macos-build"
+            ],
+            "status": {
+              "runner": "mini-02",
+              "host": "mac-mini-02",
+              "githubState": "online",
+              "serviceState": "active",
+              "busy": false,
+              "version": "2.329.0",
+              "drift": "labels: +macos-build; labels: -old-label",
+              "desired": true
+            },
+            "plan": [
+              {
+                "action": "reconcile-labels",
+                "apply": true,
+                "host": "mac-mini-02",
+                "runner": "mini-02",
+                "reason": "add macos-build; remove old-label",
+                "command": "bin/fleet apply mac-mini-02 --runner mini-02",
+                "blocked": false
+              }
+            ]
+          }
+        }
+      ],
+      "warnings": [],
+      "desired": {
+        "host": {
+          "id": "mac-mini-02",
+          "platform": "darwin-arm64",
+          "sshTarget": "mac-mini-02",
+          "sshSetting": "mac-mini-02",
+          "root": "~/gh-runners/acme-demo",
+          "serviceMode": "launchagent",
+          "labels": [
+            "fleet",
+            "macos-build"
+          ],
+          "runners": [
+            {
+              "name": "mini-02",
+              "directory": "runner-01",
+              "labels": [],
+              "excludeLabels": [],
+              "replaces": null,
+              "decommission": false
+            }
+          ],
+          "serviceAccount": null,
+          "enabled": true,
+          "sshTransport": "openssh"
+        },
+        "plan": [
+          {
+            "action": "reconcile-labels",
+            "apply": true,
+            "host": "mac-mini-02",
+            "runner": "mini-02",
+            "reason": "add macos-build; remove old-label",
+            "command": "bin/fleet apply mac-mini-02 --runner mini-02",
+            "blocked": false
+          }
+        ],
+        "pendingChanges": 1,
+        "error": null,
+        "checkedAt": "2026-10-03T11:59:56Z",
+        "checks": [],
+        "checksAt": null
+      }
+    },
+    {
+      "id": "ts:nNew",
+      "displayName": "mac-mini-03",
+      "description": null,
+      "host": "mac-mini-03",
+      "os": "macos",
+      "osVersion": null,
+      "tailnet": {
+        "nodeId": "nNew",
+        "hostname": "mac-mini-03",
+        "dnsName": "mac-mini-03.demo.ts.net",
+        "os": "macOS",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": true,
+        "lastSeen": null,
+        "tags": [],
+        "sshHostKeys": []
+      },
+      "connection": {
+        "kind": "error",
+        "detail": "SSH permission denied. Check the host's SSH login and tailnet access."
+      },
+      "health": null,
+      "diagnostics": null,
+      "monitoring": {
+        "machineKey": "inv:mac-mini-03",
+        "maintenanceUntil": null,
+        "alerts": [],
+        "events": [
+          {
+            "id": "00000000000000000003",
+            "machineKey": "inv:mac-mini-03",
+            "machineName": "mac-mini-03",
+            "at": "2026-10-03T10:00:00Z",
+            "kind": "monitoringStarted",
+            "detail": "Started observing this machine. Earlier events are not known."
+          }
+        ]
+      },
+      "runners": [
+        {
+          "key": "inv:mac-mini-03:mini-03-01",
+          "name": "mini-03-01",
+          "org": "acme-demo",
+          "machineId": "ts:nNew",
+          "installed": "unknown",
+          "connected": "unknown",
+          "activity": {
+            "kind": "unknown"
+          },
+          "github": null,
+          "local": {
+            "installDir": "~/gh-runners/acme-demo/runner-01",
+            "configured": false,
+            "serviceState": "missing",
+            "version": null,
+            "asOf": "2026-10-03T11:56:00Z",
+            "stale": true
+          },
+          "currentJob": null,
+          "warnings": [],
+          "desired": {
+            "hostId": "mac-mini-03",
+            "role": {
+              "kind": "declared"
+            },
+            "desiredLabels": [
+              "fleet",
+              "macos-build"
+            ],
+            "status": {
+              "runner": "mini-03-01",
+              "host": "mac-mini-03",
+              "githubState": "missing",
+              "serviceState": "unknown",
+              "busy": null,
+              "version": null,
+              "drift": "host unavailable",
+              "desired": true
+            },
+            "plan": [
+              {
+                "action": "inspect",
+                "apply": false,
+                "host": "mac-mini-03",
+                "runner": "mini-03-01",
+                "reason": "host unavailable: SSH permission denied. Check the host's SSH login and tailnet access.",
+                "command": null,
+                "blocked": true
+              }
+            ]
+          }
+        }
+      ],
+      "warnings": [],
+      "desired": {
+        "host": {
+          "id": "mac-mini-03",
+          "platform": "darwin-arm64",
+          "sshTarget": "mac-mini-03",
+          "sshSetting": "mac-mini-03",
+          "root": "~/gh-runners/acme-demo",
+          "serviceMode": "launchagent",
+          "labels": [
+            "fleet",
+            "macos-build"
+          ],
+          "runners": [
+            {
+              "name": "mini-03-01",
+              "directory": "runner-01",
+              "labels": [],
+              "excludeLabels": [],
+              "replaces": null,
+              "decommission": false
+            }
+          ],
+          "serviceAccount": null,
+          "enabled": true,
+          "sshTransport": "openssh"
+        },
+        "plan": [
+          {
+            "action": "inspect",
+            "apply": false,
+            "host": "mac-mini-03",
+            "runner": "mini-03-01",
+            "reason": "host unavailable: SSH permission denied. Check the host's SSH login and tailnet access.",
+            "command": null,
+            "blocked": true
+          }
+        ],
+        "pendingChanges": 0,
+        "error": "SSH permission denied. Check the host's SSH login and tailnet access.",
+        "checkedAt": "2026-10-03T11:56:00Z",
+        "checks": [],
+        "checksAt": null
+      }
+    },
+    {
+      "id": "ts:nStudio",
+      "displayName": "studio",
+      "description": null,
+      "host": "studio",
+      "os": "macos",
+      "osVersion": "macOS 15.6",
+      "tailnet": {
+        "nodeId": "nStudio",
+        "hostname": "studio",
+        "dnsName": "studio.demo.ts.net",
+        "os": "macOS",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": true,
+        "lastSeen": null,
+        "tags": [],
+        "sshHostKeys": []
+      },
+      "connection": {
+        "kind": "connected",
+        "checkedAt": "2026-10-03T11:59:54Z"
+      },
+      "health": {
+        "asOf": "2026-10-03T11:59:54Z",
+        "stale": false,
+        "cpuPercent": 38.5,
+        "loadAverage": [
+          3.85,
+          3.2083333333333335,
+          2.75
+        ],
+        "logicalCores": 12,
+        "memoryTotalBytes": 64000000000,
+        "memoryAvailableBytes": 21000000000,
+        "disks": [
+          {
+            "mountPoint": "/",
+            "totalBytes": 994000000000,
+            "availableBytes": 312000000000
+          }
+        ],
+        "uptimeSecs": 792000,
+        "bootId": "demo-boot-session"
+      },
+      "diagnostics": {
+        "asOf": "2026-10-03T11:59:54Z",
+        "stale": false,
+        "checks": [
+          {
+            "id": "tailscale-install",
+            "group": "network",
+            "title": "Tailscale installation",
+            "status": "info",
+            "value": "CLI + daemon",
+            "detail": "CLI: /usr/local/bin/tailscale. GUI installations can also include a CLI."
+          },
+          {
+            "id": "tailscale-version",
+            "group": "network",
+            "title": "Tailscale version",
+            "status": "info",
+            "value": "1.90.0",
+            "detail": "Version reported by the local Tailscale daemon."
+          },
+          {
+            "id": "tailscale-state",
+            "group": "network",
+            "title": "Tailscale connection",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Local daemon state from tailscale status."
+          },
+          {
+            "id": "tailscale-ssh",
+            "group": "network",
+            "title": "Tailscale SSH",
+            "status": "pass",
+            "value": "Enabled",
+            "detail": "The local RunSSH preference is enabled. Tailnet access rules still control who can connect."
+          },
+          {
+            "id": "power-sleep",
+            "group": "power",
+            "title": "Sleep on AC power",
+            "status": "pass",
+            "value": "Never",
+            "detail": "Automatic sleep interrupts remote access and jobs. This timeout does not cover lid actions or every standby policy."
+          },
+          {
+            "id": "power-displaysleep",
+            "group": "power",
+            "title": "Display off on AC power",
+            "status": "info",
+            "value": "After 10 minutes",
+            "detail": "Display sleep is separate from system sleep; Modern Standby devices may also change connectivity when the display turns off."
+          },
+          {
+            "id": "power-recovery",
+            "group": "power",
+            "title": "Restart after power failure",
+            "status": "pass",
+            "value": "Enabled",
+            "detail": "AC autorestart setting from pmset. Availability depends on the Mac model."
+          },
+          {
+            "id": "power-wake",
+            "group": "power",
+            "title": "Wake for network access",
+            "status": "info",
+            "value": "Enabled",
+            "detail": "Wake-on-network setting from pmset. This does not guarantee wake through Tailscale."
+          },
+          {
+            "id": "ssh-identity",
+            "group": "system",
+            "title": "SSH account",
+            "status": "info",
+            "value": "ci",
+            "detail": "Account used for this read-only inspection."
+          },
+          {
+            "id": "architecture",
+            "group": "system",
+            "title": "Architecture",
+            "status": "info",
+            "value": "arm64",
+            "detail": "Architecture reported by the operating system."
+          },
+          {
+            "id": "disk-space",
+            "group": "system",
+            "title": "Disk space",
+            "status": "pass",
+            "value": "At least 10% free",
+            "detail": "/: 290.6 GiB free of 925.7 GiB"
+          },
+          {
+            "id": "runner-startup",
+            "group": "runners",
+            "title": "Runner startup",
+            "status": "info",
+            "value": "User login required",
+            "detail": "Configured as per-user LaunchAgents. Console user: ci. A reboot may require login before runners start."
+          },
+          {
+            "id": "runner:studio-1",
+            "group": "runners",
+            "title": "studio-1",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Service: active · version: 2.329.0 · ~/gh-runners/acme-demo/runner-01"
+          },
+          {
+            "id": "runner:studio-2",
+            "group": "runners",
+            "title": "studio-2",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Service: active · version: 2.329.0 · ~/gh-runners/acme-demo/runner-02"
+          }
+        ]
+      },
+      "monitoring": {
+        "machineKey": "inv:studio",
+        "maintenanceUntil": null,
+        "alerts": [],
+        "events": [
+          {
+            "id": "00000000000000000009",
+            "machineKey": "inv:studio",
+            "machineName": "studio",
+            "at": "2026-10-03T11:23:00Z",
+            "kind": "runnerServiceChanged",
+            "detail": "studio-1: inactive → running."
+          },
+          {
+            "id": "00000000000000000008",
+            "machineKey": "inv:studio",
+            "machineName": "studio",
+            "at": "2026-10-03T11:22:00Z",
+            "kind": "rebooted",
+            "detail": "A different operating-system boot session was observed."
+          },
+          {
+            "id": "00000000000000000004",
+            "machineKey": "inv:studio",
+            "machineName": "studio",
+            "at": "2026-10-03T10:00:00Z",
+            "kind": "monitoringStarted",
+            "detail": "Started observing this machine. Earlier events are not known."
+          }
+        ]
+      },
+      "runners": [
+        {
+          "key": "gh:acme-demo:101",
+          "name": "studio-1",
+          "org": "acme-demo",
+          "machineId": "ts:nStudio",
+          "installed": "yes",
+          "connected": "yes",
+          "activity": {
+            "kind": "busy",
+            "since": "2026-10-03T11:12:48Z"
+          },
+          "github": {
+            "id": 101,
+            "status": "online",
+            "busy": true,
+            "labels": [
+              "self-hosted",
+              "macOS",
+              "ARM64",
+              "xcode-16"
+            ],
+            "os": "macOS",
+            "version": "2.329.0",
+            "ephemeral": false,
+            "asOf": "2026-10-03T11:59:51Z",
+            "stale": false
+          },
+          "local": {
+            "installDir": "~/gh-runners/acme-demo/runner-01",
+            "configured": true,
+            "serviceState": "active",
+            "version": "2.329.0",
+            "asOf": "2026-10-03T11:59:54Z",
+            "stale": false
+          },
+          "currentJob": {
+            "id": 9001,
+            "name": "build (macOS)",
+            "workflowName": "Release",
+            "repo": "acme-demo/ios-app",
+            "branch": "main",
+            "startedAt": "2026-10-03T11:12:48Z",
+            "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/90010/job/9001",
+            "labels": [
+              "self-hosted",
+              "macOS",
+              "xcode-16"
+            ]
+          },
+          "warnings": [],
+          "desired": {
+            "hostId": "studio",
+            "role": {
+              "kind": "declared"
+            },
+            "desiredLabels": [
+              "fleet",
+              "macos-build",
+              "xcode",
+              "macos-e2e"
+            ],
+            "status": {
+              "runner": "studio-1",
+              "host": "studio",
+              "githubState": "online",
+              "serviceState": "active",
+              "busy": true,
+              "version": "2.329.0",
+              "drift": "in sync",
+              "desired": true
+            },
+            "plan": [
+              {
+                "action": "no-change",
+                "apply": false,
+                "host": "studio",
+                "runner": "studio-1",
+                "reason": "desired state is satisfied",
+                "command": null,
+                "blocked": false
+              }
+            ]
+          }
+        },
+        {
+          "key": "gh:acme-demo:102",
+          "name": "studio-2",
+          "org": "acme-demo",
+          "machineId": "ts:nStudio",
+          "installed": "yes",
+          "connected": "yes",
+          "activity": {
+            "kind": "idle"
+          },
+          "github": {
+            "id": 102,
+            "status": "online",
+            "busy": false,
+            "labels": [
+              "self-hosted",
+              "macOS",
+              "ARM64",
+              "xcode-16"
+            ],
+            "os": "macOS",
+            "version": "2.329.0",
+            "ephemeral": false,
+            "asOf": "2026-10-03T11:59:51Z",
+            "stale": false
+          },
+          "local": {
+            "installDir": "~/gh-runners/acme-demo/runner-02",
+            "configured": true,
+            "serviceState": "active",
+            "version": "2.329.0",
+            "asOf": "2026-10-03T11:59:54Z",
+            "stale": false
+          },
+          "currentJob": null,
+          "warnings": [],
+          "desired": {
+            "hostId": "studio",
+            "role": {
+              "kind": "declared"
+            },
+            "desiredLabels": [
+              "fleet",
+              "macos-build",
+              "xcode"
+            ],
+            "status": {
+              "runner": "studio-2",
+              "host": "studio",
+              "githubState": "online",
+              "serviceState": "active",
+              "busy": false,
+              "version": "2.329.0",
+              "drift": "in sync",
+              "desired": true
+            },
+            "plan": [
+              {
+                "action": "no-change",
+                "apply": false,
+                "host": "studio",
+                "runner": "studio-2",
+                "reason": "desired state is satisfied",
+                "command": null,
+                "blocked": false
+              }
+            ]
+          }
+        },
+        {
+          "key": "gh:acme-demo:90",
+          "name": "Studio-Old-2",
+          "org": "acme-demo",
+          "machineId": "ts:nStudio",
+          "installed": "yes",
+          "connected": "unknown",
+          "activity": {
+            "kind": "unknown"
+          },
+          "github": {
+            "id": 90,
+            "status": "online",
+            "busy": false,
+            "labels": [
+              "macOS",
+              "self-hosted"
+            ],
+            "os": "macOS",
+            "version": null,
+            "ephemeral": null,
+            "asOf": "2026-10-03T11:56:00Z",
+            "stale": true
+          },
+          "local": {
+            "installDir": "~/actions-runner-2",
+            "configured": true,
+            "serviceState": "active",
+            "version": "2.321.0",
+            "asOf": "2026-10-03T11:59:54Z",
+            "stale": false
+          },
+          "currentJob": null,
+          "warnings": [],
+          "desired": {
+            "hostId": "studio",
+            "role": {
+              "kind": "legacy",
+              "replacedBy": "studio-2"
+            },
+            "desiredLabels": [],
+            "status": {
+              "runner": "Studio-Old-2",
+              "host": "studio",
+              "githubState": "online",
+              "serviceState": "active",
+              "busy": false,
+              "version": "2.321.0",
+              "drift": "legacy → studio-2",
+              "desired": false
+            },
+            "plan": [
+              {
+                "action": "retire-legacy",
+                "apply": false,
+                "host": "studio",
+                "runner": "Studio-Old-2",
+                "reason": "replacement studio-2 is healthy; exact directory ~/actions-runner-2 will be preserved",
+                "command": "bin/fleet retire studio --runner studio-2",
+                "blocked": false
+              }
+            ]
+          }
+        }
+      ],
+      "warnings": [],
+      "desired": {
+        "host": {
+          "id": "studio",
+          "platform": "darwin-arm64",
+          "sshTarget": "studio",
+          "sshSetting": "studio",
+          "root": "~/gh-runners/acme-demo",
+          "serviceMode": "launchagent",
+          "labels": [
+            "fleet",
+            "macos-build",
+            "xcode"
+          ],
+          "runners": [
+            {
+              "name": "studio-1",
+              "directory": "runner-01",
+              "labels": [
+                "macos-e2e"
+              ],
+              "excludeLabels": [],
+              "replaces": null,
+              "decommission": false
+            },
+            {
+              "name": "studio-2",
+              "directory": "runner-02",
+              "labels": [],
+              "excludeLabels": [],
+              "replaces": {
+                "name": "Studio-Old-2",
+                "directory": "~/actions-runner-2",
+                "repository": null
+              },
+              "decommission": false
+            }
+          ],
+          "serviceAccount": null,
+          "enabled": true,
+          "sshTransport": "openssh"
+        },
+        "plan": [
+          {
+            "action": "no-change",
+            "apply": false,
+            "host": "studio",
+            "runner": "studio-1",
+            "reason": "desired state is satisfied",
+            "command": null,
+            "blocked": false
+          },
+          {
+            "action": "no-change",
+            "apply": false,
+            "host": "studio",
+            "runner": "studio-2",
+            "reason": "desired state is satisfied",
+            "command": null,
+            "blocked": false
+          },
+          {
+            "action": "retire-legacy",
+            "apply": false,
+            "host": "studio",
+            "runner": "Studio-Old-2",
+            "reason": "replacement studio-2 is healthy; exact directory ~/actions-runner-2 will be preserved",
+            "command": "bin/fleet retire studio --runner studio-2",
+            "blocked": false
+          }
+        ],
+        "pendingChanges": 1,
+        "error": null,
+        "checkedAt": "2026-10-03T11:59:54Z",
+        "checks": [],
+        "checksAt": null
+      }
+    },
+    {
+      "id": "ts:nWin",
+      "displayName": "win-builder",
+      "description": null,
+      "host": "win-builder",
+      "os": "windows",
+      "osVersion": "Windows Server 2022",
+      "tailnet": {
+        "nodeId": "nWin",
+        "hostname": "win-builder",
+        "dnsName": "win-builder.demo.ts.net",
+        "os": "windows",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": false,
+        "lastSeen": "2026-10-03T09:00:00Z",
+        "tags": [],
+        "sshHostKeys": []
+      },
+      "connection": {
+        "kind": "offline",
+        "lastSeen": "2026-10-03T09:00:00Z"
+      },
+      "health": {
+        "asOf": "2026-10-03T09:00:00Z",
+        "stale": true,
+        "cpuPercent": 4.0,
+        "loadAverage": [
+          0.4,
+          0.3333333333333333,
+          0.2857142857142857
+        ],
+        "logicalCores": 12,
+        "memoryTotalBytes": 32000000000,
+        "memoryAvailableBytes": 22000000000,
+        "disks": [
+          {
+            "mountPoint": "C:\\",
+            "totalBytes": 512000000000,
+            "availableBytes": 140000000000
+          }
+        ],
+        "uptimeSecs": 792000,
+        "bootId": "demo-boot-session"
+      },
+      "diagnostics": {
+        "asOf": "2026-10-03T09:00:00Z",
+        "stale": true,
+        "checks": [
+          {
+            "id": "tailscale-install",
+            "group": "network",
+            "title": "Tailscale installation",
+            "status": "info",
+            "value": "Windows app + service",
+            "detail": "CLI: C:\\Program Files\\Tailscale\\tailscale.exe. GUI installations can also include a CLI."
+          },
+          {
+            "id": "tailscale-version",
+            "group": "network",
+            "title": "Tailscale version",
+            "status": "info",
+            "value": "1.90.0",
+            "detail": "Version reported by the local Tailscale daemon."
+          },
+          {
+            "id": "tailscale-state",
+            "group": "network",
+            "title": "Tailscale connection",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Local daemon state from tailscale status."
+          },
+          {
+            "id": "tailscale-ssh",
+            "group": "network",
+            "title": "Tailscale SSH",
+            "status": "info",
+            "value": "Not supported",
+            "detail": "This Tailscale variant does not host Tailscale SSH. Use the operating system's SSH server over the tailnet."
+          },
+          {
+            "id": "tailscale-unattended",
+            "group": "network",
+            "title": "Tailscale unattended mode",
+            "status": "pass",
+            "value": "Enabled",
+            "detail": "The ForceDaemon preference controls whether Tailscale stays connected after logout."
+          },
+          {
+            "id": "tailscale-startup",
+            "group": "network",
+            "title": "Tailscale startup",
+            "status": "pass",
+            "value": "Starts at boot",
+            "detail": "Native service startup: Auto."
+          },
+          {
+            "id": "power-sleep",
+            "group": "power",
+            "title": "Sleep on AC power",
+            "status": "pass",
+            "value": "Never",
+            "detail": "Automatic sleep interrupts remote access and jobs. This timeout does not cover lid actions or every standby policy."
+          },
+          {
+            "id": "power-displaysleep",
+            "group": "power",
+            "title": "Display off on AC power",
+            "status": "info",
+            "value": "After 10 seconds",
+            "detail": "Display sleep is separate from system sleep; Modern Standby devices may also change connectivity when the display turns off."
+          },
+          {
+            "id": "power-hibernate",
+            "group": "power",
+            "title": "Hibernate on AC power",
+            "status": "pass",
+            "value": "Never",
+            "detail": "Active power plan hibernation timeout."
+          },
+          {
+            "id": "power-lid",
+            "group": "power",
+            "title": "Lid close on AC power",
+            "status": "info",
+            "value": "Do nothing",
+            "detail": "Active power plan policy, applicable only to devices with a lid."
+          },
+          {
+            "id": "power-standby-network",
+            "group": "power",
+            "title": "Network during standby",
+            "status": "info",
+            "value": "Managed by Windows",
+            "detail": "AC power plan preference. Hardware support and group policy may override it; this does not prove connectivity during Modern Standby."
+          },
+          {
+            "id": "ssh-identity",
+            "group": "system",
+            "title": "SSH account",
+            "status": "info",
+            "value": "ci",
+            "detail": "Account used for this read-only inspection."
+          },
+          {
+            "id": "architecture",
+            "group": "system",
+            "title": "Architecture",
+            "status": "info",
+            "value": "arm64",
+            "detail": "Architecture reported by the operating system."
+          },
+          {
+            "id": "disk-space",
+            "group": "system",
+            "title": "Disk space",
+            "status": "pass",
+            "value": "At least 10% free",
+            "detail": "C:\\: 130.4 GiB free of 476.8 GiB"
+          },
+          {
+            "id": "runner-startup",
+            "group": "runners",
+            "title": "Runner startup",
+            "status": "info",
+            "value": "System services",
+            "detail": "The inventory configures runners as native system services. Service state is checked separately below."
+          },
+          {
+            "id": "runner:win-builder",
+            "group": "runners",
+            "title": "win-builder",
+            "status": "pass",
+            "value": "Running",
+            "detail": "Service: running · version: 2.329.0 · C:\\gh-runners\\acme-demo\\runner-01"
+          }
+        ]
+      },
+      "monitoring": {
+        "machineKey": "inv:win-builder",
+        "maintenanceUntil": null,
+        "alerts": [],
+        "events": [
+          {
+            "id": "00000000000000000005",
+            "machineKey": "inv:win-builder",
+            "machineName": "win-builder",
+            "at": "2026-10-03T10:00:00Z",
+            "kind": "monitoringStarted",
+            "detail": "Started observing this machine. Earlier events are not known."
+          }
+        ]
+      },
+      "runners": [
+        {
+          "key": "gh:acme-demo:401",
+          "name": "win-builder",
+          "org": "acme-demo",
+          "machineId": "ts:nWin",
+          "installed": "unknown",
+          "connected": "no",
+          "activity": {
+            "kind": "offline"
+          },
+          "github": {
+            "id": 401,
+            "status": "offline",
+            "busy": false,
+            "labels": [
+              "self-hosted",
+              "Windows",
+              "X64"
+            ],
+            "os": "Windows",
+            "version": "2.329.0",
+            "ephemeral": false,
+            "asOf": "2026-10-03T11:59:51Z",
+            "stale": false
+          },
+          "local": null,
+          "currentJob": null,
+          "warnings": [],
+          "desired": {
+            "hostId": "win-builder",
+            "role": {
+              "kind": "declared"
+            },
+            "desiredLabels": [
+              "fleet",
+              "windows-build"
+            ],
+            "status": {
+              "runner": "win-builder",
+              "host": "win-builder",
+              "githubState": "missing",
+              "serviceState": "unknown",
+              "busy": null,
+              "version": null,
+              "drift": "host unavailable",
+              "desired": true
+            },
+            "plan": [
+              {
+                "action": "inspect",
+                "apply": false,
+                "host": "win-builder",
+                "runner": "win-builder",
+                "reason": "host unavailable: Host unreachable.",
+                "command": null,
+                "blocked": true
+              }
+            ]
+          }
+        }
+      ],
+      "warnings": [],
+      "desired": {
+        "host": {
+          "id": "win-builder",
+          "platform": "windows-x64",
+          "sshTarget": "win-builder",
+          "sshSetting": "win-builder",
+          "root": "C:\\gh-runners\\acme-demo",
+          "serviceMode": "windows-service",
+          "labels": [
+            "fleet",
+            "windows-build"
+          ],
+          "runners": [
+            {
+              "name": "win-builder",
+              "directory": "runner-01",
+              "labels": [],
+              "excludeLabels": [],
+              "replaces": null,
+              "decommission": false
+            }
+          ],
+          "serviceAccount": ".\\builder",
+          "enabled": true,
+          "sshTransport": "openssh"
+        },
+        "plan": [
+          {
+            "action": "inspect",
+            "apply": false,
+            "host": "win-builder",
+            "runner": "win-builder",
+            "reason": "host unavailable: Host unreachable.",
+            "command": null,
+            "blocked": true
+          }
+        ],
+        "pendingChanges": 0,
+        "error": "Host unreachable.",
+        "checkedAt": "2026-10-03T11:56:00Z",
+        "checks": [],
+        "checksAt": null
+      }
+    }
+  ],
+  "otherMachines": [
+    {
+      "id": "ts:nLaptop",
+      "displayName": "dev-laptop",
+      "description": null,
+      "host": "dev-laptop.demo.ts.net",
+      "os": "macos",
+      "osVersion": null,
+      "tailnet": {
+        "nodeId": "nLaptop",
+        "hostname": "dev-laptop",
+        "dnsName": "dev-laptop.demo.ts.net",
+        "os": "macOS",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": true,
+        "lastSeen": null,
+        "tags": [],
+        "sshHostKeys": []
+      },
+      "connection": {
+        "kind": "pending"
+      },
+      "health": null,
+      "diagnostics": null,
+      "monitoring": {
+        "machineKey": "ts:nLaptop",
+        "maintenanceUntil": null,
+        "alerts": [],
+        "events": [
+          {
+            "id": "00000000000000000006",
+            "machineKey": "ts:nLaptop",
+            "machineName": "dev-laptop",
+            "at": "2026-10-03T10:00:00Z",
+            "kind": "monitoringStarted",
+            "detail": "Started observing this machine. Earlier events are not known."
+          }
+        ]
+      },
+      "runners": [],
+      "warnings": [],
+      "desired": null
+    },
+    {
+      "id": "ts:nSpare",
+      "displayName": "spare-ubuntu",
+      "description": null,
+      "host": "spare-ubuntu.demo.ts.net",
+      "os": "linux",
+      "osVersion": null,
+      "tailnet": {
+        "nodeId": "nSpare",
+        "hostname": "spare-ubuntu",
+        "dnsName": "spare-ubuntu.demo.ts.net",
+        "os": "linux",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": true,
+        "lastSeen": null,
+        "tags": [],
+        "sshHostKeys": [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoHostKeyForPreviewOnly"
+        ]
+      },
+      "connection": {
+        "kind": "pending"
+      },
+      "health": null,
+      "diagnostics": null,
+      "monitoring": {
+        "machineKey": "ts:nSpare",
+        "maintenanceUntil": null,
+        "alerts": [],
+        "events": [
+          {
+            "id": "00000000000000000007",
+            "machineKey": "ts:nSpare",
+            "machineName": "spare-ubuntu",
+            "at": "2026-10-03T10:00:00Z",
+            "kind": "monitoringStarted",
+            "detail": "Started observing this machine. Earlier events are not known."
+          }
+        ]
+      },
+      "runners": [],
+      "warnings": [],
+      "desired": null
+    }
+  ],
+  "unmatchedRunners": [
+    {
+      "key": "gh:acme-demo:501",
+      "name": "cloud-gpu-1",
+      "org": "acme-demo",
+      "machineId": null,
+      "installed": "unknown",
+      "connected": "yes",
+      "activity": {
+        "kind": "idle"
+      },
+      "github": {
+        "id": 501,
+        "status": "online",
+        "busy": false,
+        "labels": [
+          "self-hosted",
+          "Linux",
+          "X64",
+          "gpu"
+        ],
+        "os": "Linux",
+        "version": "2.329.0",
+        "ephemeral": false,
+        "asOf": "2026-10-03T11:59:51Z",
+        "stale": false
+      },
+      "local": null,
+      "currentJob": null,
+      "warnings": [],
+      "desired": null
+    }
+  ],
+  "ignored": [
+    {
+      "peer": {
+        "nodeId": "nNas",
+        "hostname": "home-nas",
+        "dnsName": "home-nas.demo.ts.net",
+        "os": "linux",
+        "ips": [
+          "100.64.0.0"
+        ],
+        "online": true,
+        "lastSeen": null,
+        "tags": [],
+        "sshHostKeys": [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoHostKeyForPreviewOnly"
+        ]
+      },
+      "ignoredAt": "2026-09-30T12:00:00Z"
+    }
+  ],
+  "queue": {
+    "jobs": [
+      {
+        "org": "acme-demo",
+        "job": {
+          "id": 9004,
+          "name": "train-small",
+          "workflowName": "Nightly",
+          "repo": "acme-demo/ml",
+          "branch": "main",
+          "startedAt": null,
+          "htmlUrl": "https://github.com/acme-demo/ml/actions/runs/90040/job/9004",
+          "labels": [
+            "self-hosted",
+            "gpu",
+            "a100"
+          ]
+        },
+        "createdAt": "2026-10-03T11:34:00Z",
+        "compatibleRunners": [],
+        "compatibleOnline": 0,
+        "compatibleIdle": 0
+      },
+      {
+        "org": "acme-demo",
+        "job": {
+          "id": 9003,
+          "name": "ui-tests",
+          "workflowName": "CI",
+          "repo": "acme-demo/ios-app",
+          "branch": "main",
+          "startedAt": null,
+          "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/90030/job/9003",
+          "labels": [
+            "self-hosted",
+            "macOS",
+            "xcode-16"
+          ]
+        },
+        "createdAt": "2026-10-03T11:57:30Z",
+        "compatibleRunners": [
+          "gh:acme-demo:101",
+          "gh:acme-demo:102"
+        ],
+        "compatibleOnline": 2,
+        "compatibleIdle": 1
+      }
+    ],
+    "otherQueued": 1,
+    "complete": true,
+    "asOf": "2026-10-03T11:59:39Z"
+  },
+  "plan": {
+    "inventoryPath": "demo: inventory/fleet.toml",
+    "inventoryError": null,
+    "organization": {
+      "name": "acme-demo",
+      "url": "https://github.com/acme-demo",
+      "runnerGroup": "Acme trusted builders"
+    },
+    "githubError": null,
+    "policyErrors": [],
+    "control": [],
+    "checkedAt": "2026-10-03T11:56:00Z",
+    "refreshing": false,
+    "controlChecks": [],
+    "checksAt": null,
+    "checksError": null,
+    "doctorRunning": false,
+    "operation": null
+  },
+  "orgs": [
+    {
+      "login": "acme-demo",
+      "hasToken": true,
+      "runnersAsOf": "2026-10-03T11:59:51Z",
+      "jobsAsOf": "2026-10-03T11:59:39Z",
+      "reposScanned": 4,
+      "jobsTruncated": false,
+      "error": null,
+      "rateLimit": {
+        "limit": 5000,
+        "remaining": 4712,
+        "resetsAt": "2026-10-03T12:38:00Z"
+      },
+      "repoScope": {
+        "kind": "recent",
+        "maxRepos": 20
+      },
+      "auth": "ghCli"
+    }
+  ],
+  "tailnet": {
+    "localOnline": true,
+    "available": true,
+    "tailnetName": "demo.ts.net",
+    "asOf": "2026-10-03T11:59:56Z",
+    "error": null
+  },
+  "monitoring": {
+    "desktopNotifications": false,
+    "storageError": null,
+    "alerts": [
+      {
+        "id": "inv:mac-mini-02:disk",
+        "machineKey": "inv:mac-mini-02",
+        "machineName": "mac-mini-02",
+        "kind": "lowDisk",
+        "since": "2026-10-03T11:47:00Z",
+        "detail": "/: 5.7% free (13.0 GiB of 228.2 GiB).",
+        "stale": false,
+        "muted": false
+      }
+    ],
+    "events": [
+      {
+        "id": "00000000000000000010",
+        "machineKey": "inv:mac-mini-02",
+        "machineName": "mac-mini-02",
+        "at": "2026-10-03T11:48:00Z",
+        "kind": "lowDisk",
+        "detail": "/: 5.7% free (13.0 GiB of 228.2 GiB)."
+      },
+      {
+        "id": "00000000000000000009",
+        "machineKey": "inv:studio",
+        "machineName": "studio",
+        "at": "2026-10-03T11:23:00Z",
+        "kind": "runnerServiceChanged",
+        "detail": "studio-1: inactive → running."
+      },
+      {
+        "id": "00000000000000000008",
+        "machineKey": "inv:studio",
+        "machineName": "studio",
+        "at": "2026-10-03T11:22:00Z",
+        "kind": "rebooted",
+        "detail": "A different operating-system boot session was observed."
+      },
+      {
+        "id": "00000000000000000007",
+        "machineKey": "ts:nSpare",
+        "machineName": "spare-ubuntu",
+        "at": "2026-10-03T10:00:00Z",
+        "kind": "monitoringStarted",
+        "detail": "Started observing this machine. Earlier events are not known."
+      },
+      {
+        "id": "00000000000000000006",
+        "machineKey": "ts:nLaptop",
+        "machineName": "dev-laptop",
+        "at": "2026-10-03T10:00:00Z",
+        "kind": "monitoringStarted",
+        "detail": "Started observing this machine. Earlier events are not known."
+      },
+      {
+        "id": "00000000000000000005",
+        "machineKey": "inv:win-builder",
+        "machineName": "win-builder",
+        "at": "2026-10-03T10:00:00Z",
+        "kind": "monitoringStarted",
+        "detail": "Started observing this machine. Earlier events are not known."
+      },
+      {
+        "id": "00000000000000000004",
+        "machineKey": "inv:studio",
+        "machineName": "studio",
+        "at": "2026-10-03T10:00:00Z",
+        "kind": "monitoringStarted",
+        "detail": "Started observing this machine. Earlier events are not known."
+      },
+      {
+        "id": "00000000000000000003",
+        "machineKey": "inv:mac-mini-03",
+        "machineName": "mac-mini-03",
+        "at": "2026-10-03T10:00:00Z",
+        "kind": "monitoringStarted",
+        "detail": "Started observing this machine. Earlier events are not known."
+      },
+      {
+        "id": "00000000000000000002",
+        "machineKey": "inv:mac-mini-02",
+        "machineName": "mac-mini-02",
+        "at": "2026-10-03T10:00:00Z",
+        "kind": "monitoringStarted",
+        "detail": "Started observing this machine. Earlier events are not known."
+      },
+      {
+        "id": "00000000000000000001",
+        "machineKey": "inv:build-linux-01",
+        "machineName": "build-linux-01",
+        "at": "2026-10-03T10:00:00Z",
+        "kind": "monitoringStarted",
+        "detail": "Started observing this machine. Earlier events are not known."
+      }
+    ]
+  }
+}
