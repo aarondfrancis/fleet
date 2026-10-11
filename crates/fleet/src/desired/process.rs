@@ -151,6 +151,8 @@ async fn run_subprocess(
     let mut builder = Command::new(program);
     builder
         .args(args)
+        // Also covers Tailscale invoked through an SSH ProxyCommand.
+        .env("TAILSCALE_BE_CLI", "1")
         .stdin(if input.is_some() { Stdio::piped() } else { Stdio::null() })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

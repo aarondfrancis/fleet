@@ -26,6 +26,42 @@ fn tailscale_transport_keeps_payload_on_stdin() {
     assert!(!command.join(" ").contains("secret-payload"));
 }
 
+#[cfg(unix)]
+#[test]
+fn tailscale_transport_uses_cli_mode_and_runs_the_remote_script() {
+    use std::os::unix::fs::PermissionsExt;
+
+    use super::super::process::SubprocessRunner;
+
+    let directory = tempfile::tempdir().unwrap();
+    let program = directory.path().join("tailscale");
+    std::fs::write(
+        &program,
+        r#"#!/bin/sh
+if [ "$TAILSCALE_BE_CLI" != 1 ]; then
+    printf '%s\n' 'The Tailscale GUI failed to start.'
+    exit 0
+fi
+[ "$1" = ssh ] && [ "$3" = 'bash -s' ] || exit 1
+exec /bin/bash -s
+"#,
+    )
+    .unwrap();
+    std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let remote = RemoteClient::new(
+        Arc::new(SubprocessRunner),
+        Duration::from_secs(10),
+        Programs {
+            tailscale: program.to_string_lossy().into_owned(),
+            ..Programs::default()
+        },
+    );
+    let mut host = example_inventory().find_host("linux-canary").unwrap().clone();
+    host.ssh_transport = SshTransport::Tailscale;
+    let output = remote.run_script(&host, "printf 'RF1\\trunner-01\\n'", None).unwrap();
+    assert_eq!(output, "RF1\trunner-01\n");
+}
+
 #[test]
 fn openssh_transport_is_batch_and_strict() {
     let host = example_inventory().find_host("studio").unwrap().clone();
