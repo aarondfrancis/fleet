@@ -13,7 +13,7 @@ use axum::{Json, Router};
 use chrono::Utc;
 use fleet::engine::{Engine, MemorySecrets, SecretStore};
 use fleet::github::{GithubClient, GithubError};
-use fleet::model::{AppConfig, OrgAuth, OrgConfig, RepoScope};
+use fleet::model::{AccountKind, AccountSetup, AppConfig, OrgAuth, OrgConfig, RepoScope};
 use serde_json::{Value, json};
 
 mod common;
@@ -225,6 +225,8 @@ fn configured_engine(dir: &std::path::Path, base: String, secrets: Arc<dyn Secre
             repo_scope: scope(),
             added_at: Utc::now(),
             auth: OrgAuth::Token,
+            kind: AccountKind::Organization,
+            runner_repos: Vec::new(),
         }],
         ..Default::default()
     };
@@ -365,4 +367,67 @@ async fn absent_secret_is_reported_from_either_poll() {
             Some("No token in the Keychain for this organization.")
         );
     }
+}
+
+#[tokio::test]
+async fn a_repository_that_cant_be_listed_shows_its_own_error_and_hides_no_other_runners() {
+    let app = Router::new()
+        .route("/orgs/{org}/actions/runners", get(|| async {
+            Json(json!({"total_count": 1, "runners": [{"id": 1, "name": "org-mini", "status": "online", "busy": false}]}))
+        }))
+        .route("/repos/{owner}/{repo}/actions/runners", get(|Path((_owner, repo)): Path<(String, String)>| async move {
+            if repo == "private" {
+                return (StatusCode::FORBIDDEN, Json(json!({"message": "Must have admin rights to Repository."})));
+            }
+            (StatusCode::OK, Json(json!({"total_count": 1, "runners": [{"id": 2, "name": "web-mac", "status": "online", "busy": false}]})))
+        }));
+    let base = serve(app).await;
+    let dir = tempfile::tempdir().unwrap();
+    // Settings saved before accounts had a kind or runner repositories.
+    let path = dir.path().join("config.json");
+    let config = json!({"orgs": [{"login": "acme", "apiBase": base, "repoScope": {"kind": "none"},
+        "addedAt": "2026-10-01T00:00:00Z", "auth": "token"}]});
+    std::fs::write(&path, config.to_string()).unwrap();
+    let secrets = Arc::new(MemorySecrets::default());
+    secrets.set("acme", "fake").unwrap();
+    let engine = Engine::load(path, secrets).unwrap();
+    let org = &engine.config().orgs[0];
+    assert_eq!((org.kind, org.runner_repos.len()), (AccountKind::Organization, 0));
+    let invalid = engine.set_org_scope("acme", RepoScope::None, &["other/web".into()]);
+    assert_eq!(
+        invalid.unwrap_err().to_string(),
+        "other/web isn't one of acme's repositories."
+    );
+    let repos = ["acme/private".to_string(), "web".into(), "WEB".into()];
+    engine.set_org_scope("acme", RepoScope::None, &repos).unwrap();
+    assert_eq!(engine.config().orgs[0].runner_repos, ["private", "web"]);
+
+    engine.poll_github_runners().await;
+    let view = engine.view();
+    let runners: Vec<(&str, Option<&str>)> = view
+        .unmatched_runners
+        .iter()
+        .map(|r| (r.name.as_str(), r.github.as_ref().unwrap().repo.as_deref()))
+        .collect();
+    assert_eq!(runners, [("org-mini", None), ("web-mac", Some("acme/web"))]);
+    assert_eq!(view.orgs[0].error, None);
+    assert_eq!(view.orgs[0].runner_repo_errors.len(), 1);
+    assert!(
+        view.orgs[0].runner_repo_errors[0]
+            .starts_with("acme/private: GitHub refused access (403): Must have admin rights")
+    );
+    assert!(view.issues.iter().any(|i| i.id == "org:acme:repos"));
+
+    // Fixing sign-in only needs the organization list; adding an account needs every repository.
+    engine.update_org_token("acme", "replacement").await.unwrap();
+    let setup = AccountSetup {
+        kind: AccountKind::Organization,
+        repo_scope: RepoScope::None,
+        runner_repos: vec!["private".into()],
+    };
+    let refused = engine
+        .add_org("other", OrgAuth::Token, Some("fake"), setup, Some(base))
+        .await;
+    assert!(refused.unwrap_err().to_string().contains("Must have admin rights"));
+    assert_eq!(engine.config().orgs.len(), 1);
 }

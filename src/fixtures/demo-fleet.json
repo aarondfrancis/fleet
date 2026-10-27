@@ -4,8 +4,8 @@
   "summary": {
     "machines": 5,
     "machinesConnected": 2,
-    "runners": 9,
-    "runnersOnline": 6,
+    "runners": 10,
+    "runnersOnline": 7,
     "runnersBusy": 2,
     "runnersOffline": 1,
     "runnersUnknown": 2,
@@ -283,7 +283,9 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "repo": null,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-01",
@@ -352,7 +354,9 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "repo": null,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-02",
@@ -676,7 +680,9 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "repo": null,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-01",
@@ -1140,7 +1146,9 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "repo": null,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-01",
@@ -1223,7 +1231,9 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "repo": null,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-02",
@@ -1290,7 +1300,9 @@
             "version": null,
             "ephemeral": null,
             "asOf": "2026-10-03T11:56:00Z",
-            "stale": true
+            "stale": true,
+            "repo": null,
+            "update": null
           },
           "local": {
             "installDir": "~/actions-runner-2",
@@ -1587,7 +1599,7 @@
             "title": "win-builder",
             "status": "pass",
             "value": "Running",
-            "detail": "Service: running · version: 2.329.0 · C:\\gh-runners\\acme-demo\\runner-01"
+            "detail": "Service: running · version: 2.328.0 · C:\\gh-runners\\acme-demo\\runner-01"
           }
         ]
       },
@@ -1627,10 +1639,16 @@
               "X64"
             ],
             "os": "Windows",
-            "version": "2.329.0",
+            "version": "2.328.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "repo": null,
+            "update": {
+              "latest": "2.329.0",
+              "missingSince": "2026-09-21T12:00:00Z",
+              "overdue": false
+            }
           },
           "local": null,
           "currentJob": null,
@@ -1831,7 +1849,41 @@
         "version": "2.329.0",
         "ephemeral": false,
         "asOf": "2026-10-03T11:59:51Z",
-        "stale": false
+        "stale": false,
+        "repo": null,
+        "update": null
+      },
+      "local": null,
+      "currentJob": null,
+      "warnings": [],
+      "desired": null
+    },
+    {
+      "key": "gh:acme-demo:601",
+      "name": "ml-notebooks",
+      "org": "acme-demo",
+      "machineId": null,
+      "installed": "unknown",
+      "connected": "yes",
+      "activity": {
+        "kind": "idle"
+      },
+      "github": {
+        "id": 601,
+        "status": "online",
+        "busy": false,
+        "labels": [
+          "self-hosted",
+          "Linux",
+          "X64"
+        ],
+        "os": "Linux",
+        "version": "2.329.0",
+        "ephemeral": false,
+        "asOf": "2026-10-03T11:59:51Z",
+        "stale": false,
+        "repo": "acme-demo/ml",
+        "update": null
       },
       "local": null,
       "currentJob": null,
@@ -1939,6 +1991,7 @@
       "reposScanned": 4,
       "jobsTruncated": false,
       "error": null,
+      "runnerRepoErrors": [],
       "rateLimit": {
         "limit": 5000,
         "remaining": 4712,

@@ -28,6 +28,8 @@ impl Fixture {
                     repo_scope: RepoScope::Recent { max_repos: 10 },
                     added_at: ago(9999),
                     auth: OrgAuth::GhCli,
+                    kind: AccountKind::Organization,
+                    runner_repos: Vec::new(),
                 }],
                 ..Default::default()
             },
@@ -391,7 +393,8 @@ fn discovery_and_demo_cover_current_stale_offline_and_failed_ssh() {
     assert!(kinds.iter().any(|c| matches!(c, MachineConnection::Error { .. })));
     assert_eq!(view.other_machines.len(), 2);
     assert_eq!(view.ignored.len(), 1);
-    assert_eq!(view.unmatched_runners.len(), 1);
+    // The hosted pool runner and a repository runner.
+    assert_eq!(view.unmatched_runners.len(), 2);
     assert_eq!(view.queue.jobs.len(), 2);
     assert!(view.machines.iter().all(|m| m.desired.is_some()));
     let names: Vec<_> = view.machines.iter().map(|m| m.display_name.as_str()).collect();
@@ -606,4 +609,61 @@ fn identity_conflicts_do_not_reuse_previously_checked_local_facts() {
     assert_eq!(studio.diagnostics, None);
     assert!(studio.runners.iter().all(|r| r.local.is_none()));
     assert!(studio.desired.as_ref().unwrap().plan.iter().all(|item| item.blocked));
+}
+
+#[test]
+fn repository_runners_take_only_their_repository_jobs_and_show_version_drift() {
+    let mut f = Fixture::new();
+    f.config.orgs[0].runner_repos = vec!["web".into()];
+    let mut behind = gh(5, "web-mac", "online", false, MAC);
+    behind.version = Some("2.329.0".into());
+    let mut other_repo = job(11, None, "queued", MAC, None);
+    other_repo.repo = "Acme/api".into();
+    f.gh_runners(ago(10), vec![])
+        .jobs(ago(20), vec![job(10, None, "queued", MAC, None), other_repo]);
+    f.obs.github.get_mut("acme").unwrap().repo_runners =
+        [("Acme/web".into(), Timed::new(ago(10), vec![behind]))].into();
+    f.obs.runner_releases = Some(Timed::new(
+        ago(60),
+        vec![crate::runner_version::RunnerRelease {
+            version: "2.330.0".into(),
+            published_at: now() - Duration::days(40),
+        }],
+    ));
+
+    let v = f.view();
+    let github = v.unmatched_runners[0].github.as_ref().unwrap();
+    assert_eq!(github.repo.as_deref(), Some("Acme/web"));
+    assert_eq!(
+        github.update,
+        Some(crate::runner_version::RunnerUpdate {
+            latest: "2.330.0".into(),
+            missing_since: now() - Duration::days(40),
+            overdue: true,
+        })
+    );
+    let compatible: Vec<(u64, Vec<String>)> = v
+        .queue
+        .jobs
+        .iter()
+        .map(|q| (q.job.id, q.compatible_runners.clone()))
+        .collect();
+    assert_eq!(compatible, [(11, vec![]), (10, vec!["gh:acme:5".to_string()])]);
+    let update = v.issues.iter().find(|i| i.id == "gh:acme:5:update").unwrap();
+    assert_eq!(update.title, "web-mac: runner update overdue");
+}
+
+#[test]
+fn repository_runners_never_join_inventory_hosts() {
+    let mut f = Fixture::new();
+    with_inventory(&mut f);
+    f.gh_runners(ago(10), vec![]);
+    let same_name = gh(1, "mini-01", "online", false, MAC);
+    let host_label = gh(2, "stray", "online", false, &["self-hosted", "host-mini"]);
+    f.obs.github.get_mut("acme").unwrap().repo_runners =
+        [("Acme/web".into(), Timed::new(ago(10), vec![same_name, host_label]))].into();
+    let v = f.view();
+    let unmatched: Vec<&str> = v.unmatched_runners.iter().map(|r| r.name.as_str()).collect();
+    assert_eq!(unmatched, ["mini-01", "stray"]);
+    assert!(v.machines[0].runners.iter().all(|r| r.github.is_none()));
 }

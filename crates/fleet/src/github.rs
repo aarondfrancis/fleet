@@ -1,10 +1,12 @@
-//! Read-only GitHub REST client for org runners and in-flight jobs.
+//! Read-only GitHub REST client for runners, in-flight jobs and runner releases.
 //!
 //! - Runners: `GET /orgs/{org}/actions/runners` (fine-grained PAT: org
-//!   "Self-hosted runners: read"; classic: `admin:org`).
+//!   "Self-hosted runners: read"; classic: `admin:org`), and for each runner repository
+//!   `GET /repos/{owner}/{repo}/actions/runners` (repo "Administration: read").
 //! - Jobs: there is no org-wide jobs endpoint, so we list
 //!   `GET /repos/{o}/{r}/actions/runs?status=queued|in_progress` per repo in scope,
 //!   then `GET .../runs/{id}/jobs` (repo "Actions: read").
+//! - Releases: `GET /repos/actions/runner/releases`, without drafts and pre-releases.
 //! - Every GET is conditional (ETag); a 304 doesn't count against the rate limit.
 
 use std::collections::{HashMap, VecDeque};
@@ -18,7 +20,8 @@ use reqwest::header::{ACCEPT, ETAG, HeaderMap, IF_NONE_MATCH, LINK, USER_AGENT};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::model::{GhJob, GhRunner, JobScan, RateLimit, RepoScope};
+use crate::model::{AccountKind, GhJob, GhRunner, JobScan, OrgConfig, RateLimit, RepoScope};
+use crate::runner_version::RunnerRelease;
 use crate::sync::MutexExt;
 
 pub const API_VERSION: &str = "2026-03-10";
@@ -73,6 +76,15 @@ impl EtagCache {
             self.order.push_back(url);
         }
     }
+}
+
+/// One poll of an account's runners.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AccountRunners {
+    /// Organization runners, or why they couldn't be listed; empty for a personal account.
+    pub org: Result<Vec<GhRunner>, GithubError>,
+    /// Each runner repository (`owner/name`) with its runners, or why they couldn't be listed.
+    pub repos: Vec<(String, Result<Vec<GhRunner>, GithubError>)>,
 }
 
 struct Collection<T> {
@@ -259,21 +271,92 @@ impl GithubClient {
     }
 
     pub async fn org_runners(&self, org: &str) -> Result<Vec<GhRunner>, GithubError> {
-        let runners = self
-            .collection::<RawRunner>(
-                &format!("/orgs/{org}/actions/runners"),
-                "runners",
-                100,
-                MAX_RUNNER_PAGES,
-            )
+        self.runners(&format!("/orgs/{org}/actions/runners"), org)
             .await
-            .map_err(|e| hint_runner_permission(e, org))?;
+            .map_err(|e| hint_runner_permission(e, org))
+    }
+
+    /// Repository-level runners of `repo` (`owner/name`).
+    pub async fn repo_runners(&self, repo: &str) -> Result<Vec<GhRunner>, GithubError> {
+        let needs = format!(
+            "Listing {repo}'s runners needs repository admin access: a fine-grained token with the repository permission \"Administration: read\" (classic tokens: repo)."
+        );
+        self.runners(&format!("/repos/{repo}/actions/runners"), repo)
+            .await
+            .map_err(|e| match e {
+                GithubError::Forbidden(msg) => GithubError::Forbidden(format!("{msg}. {needs}")),
+                GithubError::NotFound(msg) => {
+                    GithubError::NotFound(format!("{msg}. Check the repository name. {needs}"))
+                }
+                other => other,
+            })
+    }
+
+    async fn runners(&self, path: &str, owner: &str) -> Result<Vec<GhRunner>, GithubError> {
+        let runners = self
+            .collection::<RawRunner>(path, "runners", 100, MAX_RUNNER_PAGES)
+            .await?;
         if runners.truncated {
             return Err(GithubError::Incomplete(format!(
-                "Couldn't read all of {org}'s runners within {MAX_RUNNER_PAGES} pages."
+                "Couldn't read all of {owner}'s runners within {MAX_RUNNER_PAGES} pages."
             )));
         }
         Ok(runners.items.into_iter().map(RawRunner::into_model).collect())
+    }
+
+    /// Organization and repository runners. A list that can't be read is reported beside the
+    /// others; only a rejected token or a rate limit fails the whole account.
+    pub async fn account_runners(&self, account: &OrgConfig) -> Result<AccountRunners, GithubError> {
+        let org = match account.kind {
+            AccountKind::Organization => self.org_runners(&account.login).await,
+            AccountKind::User => Ok(Vec::new()),
+        };
+        // Owned items keep the stream's future `Send` for the poller's spawned task.
+        let names: Vec<String> = account
+            .runner_repos
+            .iter()
+            .map(|name| format!("{}/{name}", account.login))
+            .collect();
+        let repos: Vec<(String, Result<Vec<GhRunner>, GithubError>)> = stream::iter(names)
+            .map(|repo| async move {
+                let runners = self.repo_runners(&repo).await;
+                (repo, runners)
+            })
+            .buffered(CONCURRENCY)
+            .collect()
+            .await;
+        if let Some(Err(e)) = std::iter::once(&org)
+            .chain(repos.iter().map(|(_, r)| r))
+            .find(|r| matches!(r, Err(GithubError::Unauthorized | GithubError::RateLimited(_))))
+        {
+            return Err(e.clone());
+        }
+        Ok(AccountRunners { org, repos })
+    }
+
+    /// The latest page of published `actions/runner` releases, newest first.
+    pub async fn runner_releases(&self) -> Result<Vec<RunnerRelease>, GithubError> {
+        #[derive(Deserialize)]
+        struct Release {
+            tag_name: String,
+            #[serde(default)]
+            draft: bool,
+            #[serde(default)]
+            prerelease: bool,
+            published_at: Option<DateTime<Utc>>,
+        }
+        let page = self.get("/repos/actions/runner/releases?per_page=30").await?;
+        let releases: Vec<Release> = decode(page.body)?;
+        Ok(releases
+            .into_iter()
+            .filter(|r| !r.draft && !r.prerelease)
+            .filter_map(|r| {
+                Some(RunnerRelease {
+                    version: r.tag_name.trim_start_matches('v').to_string(),
+                    published_at: r.published_at?,
+                })
+            })
+            .collect())
     }
 
     pub async fn recent_repos(&self, org: &str, max: usize) -> Result<Vec<String>, GithubError> {
@@ -573,6 +656,84 @@ mod tests {
             panic!("{err:?}")
         };
         assert!(msg.contains("Self-hosted runners: read"));
+    }
+
+    #[tokio::test]
+    async fn lists_repository_runners_and_a_failing_repository_hides_no_others() {
+        let router = Router::new()
+            .route(
+                "/orgs/{org}/actions/runners",
+                get(|| async { Json(json!({"total_count": 1, "runners": [runner(1, "org-mini", false)]})) }),
+            )
+            .route(
+                "/repos/{owner}/{repo}/actions/runners",
+                get(|Path((_owner, repo)): Path<(String, String)>| async move {
+                    match repo.as_str() {
+                        "private" => return (AxStatus::NOT_FOUND, Json(json!({"message": "Not Found"}))),
+                        "revoked" => return (AxStatus::UNAUTHORIZED, Json(json!({"message": "Bad credentials"}))),
+                        _ => {}
+                    }
+                    (
+                        AxStatus::OK,
+                        Json(json!({"total_count": 1, "runners": [runner(2, "web-gpu", true)]})),
+                    )
+                }),
+            );
+        let base = serve(router).await;
+        let client = GithubClient::new(&base, "t");
+        let mut account = OrgConfig {
+            login: "acme".into(),
+            api_base: base,
+            repo_scope: RepoScope::None,
+            added_at: Utc::now(),
+            auth: crate::model::OrgAuth::Token,
+            kind: AccountKind::Organization,
+            runner_repos: vec!["private".into(), "web".into()],
+        };
+        let listed = client.account_runners(&account).await.unwrap();
+        assert_eq!(listed.org.unwrap().iter().map(|r| r.id).collect::<Vec<_>>(), vec![1]);
+        let [(private, Err(GithubError::NotFound(why))), (web, Ok(web_runners))] = listed.repos.as_slice() else {
+            panic!("{:?}", listed.repos)
+        };
+        assert_eq!((private.as_str(), web.as_str()), ("acme/private", "acme/web"));
+        assert!(
+            why.contains("Check the repository name") && why.contains("Administration: read"),
+            "{why}"
+        );
+        assert_eq!(web_runners.iter().map(|r| r.id).collect::<Vec<_>>(), vec![2]);
+
+        // A personal account has no organization list to read.
+        account.kind = AccountKind::User;
+        let listed = client.account_runners(&account).await.unwrap();
+        assert_eq!(listed.org, Ok(Vec::new()));
+        assert_eq!(listed.repos.len(), 2);
+
+        // A rejected token fails the whole account, wherever GitHub reports it.
+        account.runner_repos.push("revoked".into());
+        assert_eq!(client.account_runners(&account).await, Err(GithubError::Unauthorized));
+    }
+
+    #[tokio::test]
+    async fn runner_releases_skip_drafts_and_pre_releases() {
+        let router = Router::new().route(
+            "/repos/actions/runner/releases",
+            get(|| async {
+                Json(json!([
+                    {"tag_name": "v2.331.0", "draft": true, "prerelease": false, "published_at": null},
+                    {"tag_name": "v2.330.1-rc", "draft": false, "prerelease": true, "published_at": "2026-10-02T00:00:00Z"},
+                    {"tag_name": "v2.330.0", "draft": false, "prerelease": false, "published_at": "2026-09-01T00:00:00Z"}
+                ]))
+            }),
+        );
+        let base = serve(router).await;
+        let releases = GithubClient::new(&base, "t").runner_releases().await.unwrap();
+        assert_eq!(
+            releases,
+            vec![RunnerRelease {
+                version: "2.330.0".into(),
+                published_at: "2026-09-01T00:00:00Z".parse().unwrap(),
+            }]
+        );
     }
 
     #[tokio::test]

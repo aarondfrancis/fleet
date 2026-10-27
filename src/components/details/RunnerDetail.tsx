@@ -41,7 +41,7 @@ export function RunnerDetail({ runner: r, view }: { runner: RunnerView; view: Fl
         status={<Pill tone={st.tone} hollow={st.hollow}>{st.label}</Pill>}
         subtitle={<>
           {machine ? <button className="underline-offset-2 hover:text-ink hover:underline" onClick={() => select({ kind: "machine", id: machine.id })}>{machine.displayName}</button> : "Not linked to a machine"}
-          {r.org && <> · <CopyValue value={r.org} label="Organization" /></>}{gh && ` · ${gh.os}`}
+          {gh?.repo ? <> · <CopyValue value={gh.repo} label="Repository" /></> : r.org && <> · <CopyValue value={r.org} label="Organization" /></>}{gh && ` · ${gh.os}`}
         </>}
         actions={actions.length > 0 && actions.map((a) => <Button key={a.label} small variant={a.danger ? "danger" : "default"} disabled={busy || change.preparing} onClick={() => change.open(a.request)}>
           {a.request.kind === "restart" && <Icon name="refresh" />}{a.label}…
@@ -78,7 +78,10 @@ export function RunnerDetail({ runner: r, view }: { runner: RunnerView; view: Fl
           <KeyValuePanel title="GitHub" rows={gh ? [
             ["Status", `${gh.status}${gh.busy ? ", busy" : ""}`],
             ["Runner ID", <span className="font-mono text-[12px]">{gh.id}</span>, String(gh.id)],
-            ["Version", gh.version ?? "—"],
+            ["Version", gh.update
+              ? <span className={gh.update.overdue ? "text-bad" : "text-warn"}>{gh.version} · update {gh.update.overdue ? "overdue" : "available"} ({gh.update.latest}, first missed {timeAgo(gh.update.missingSince, now)})</span>
+              : gh.version ?? "—"],
+            ...(gh.repo ? [["Registered to", `${gh.repo} (repository runner)`] as KeyValueRow] : []),
             ["Ephemeral", gh.ephemeral == null ? "—" : gh.ephemeral ? "Yes" : "No"],
           ] : []} footer={gh ? <span className={`flex items-center gap-1.5 ${gh.stale ? "text-warn" : ""}`}>{gh.stale && <Icon name="alert" size={12} />}As of {timeAgo(gh.asOf, now)}{gh.stale ? " (stale)" : ""}</span> : r.org ? `Not in ${r.org}'s runner list.` : "Not registered to an organization added to the dashboard."} />
           <KeyValuePanel title="On the machine" rows={local ? [

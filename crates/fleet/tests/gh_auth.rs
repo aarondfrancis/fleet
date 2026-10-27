@@ -12,7 +12,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use fleet::engine::{Engine, MemorySecrets, SecretStore};
 use fleet::gh;
-use fleet::model::{OrgAuth, RepoScope};
+use fleet::model::{AccountKind, AccountSetup, OrgAuth, RepoScope};
 use fleet::sync::MutexExt;
 use serde_json::json;
 
@@ -83,7 +83,17 @@ async fn gh_login_is_used_and_never_stored() {
 
     // Missing scope: refused with the exact fix, nothing saved.
     let err = engine
-        .add_org("acme", OrgAuth::GhCli, None, RepoScope::None, Some(base.clone()))
+        .add_org(
+            "acme",
+            OrgAuth::GhCli,
+            None,
+            AccountSetup {
+                kind: AccountKind::Organization,
+                repo_scope: RepoScope::None,
+                runner_repos: Vec::new(),
+            },
+            Some(base.clone()),
+        )
         .await
         .unwrap_err()
         .to_string();
@@ -96,7 +106,17 @@ async fn gh_login_is_used_and_never_stored() {
     // After the user refreshes the scope, it works and uses gh's token.
     *allowed.locked() = true;
     engine
-        .add_org("acme", OrgAuth::GhCli, None, RepoScope::None, Some(base))
+        .add_org(
+            "acme",
+            OrgAuth::GhCli,
+            None,
+            AccountSetup {
+                kind: AccountKind::Organization,
+                repo_scope: RepoScope::None,
+                runner_repos: Vec::new(),
+            },
+            Some(base),
+        )
         .await
         .unwrap();
     assert_eq!(engine.config().orgs[0].auth, OrgAuth::GhCli);

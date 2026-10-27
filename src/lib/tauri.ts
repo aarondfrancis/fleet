@@ -11,6 +11,7 @@ import type { ChangeRequest } from "../bindings/ChangeRequest";
 import type { ChangeSecrets } from "../bindings/ChangeSecrets";
 import type { ReviewView } from "../bindings/ReviewView";
 import type { GhStatus } from "../bindings/GhStatus";
+import type { AccountSetup } from "../bindings/AccountSetup";
 import type { OrgAuth } from "../bindings/OrgAuth";
 import type { RepoScope } from "../bindings/RepoScope";
 import { previewFleet } from "./preview";
@@ -42,15 +43,16 @@ export const commands = {
   getConfig: (): Promise<AppConfig> =>
     isTauri ? invoke("get_config") : Promise.resolve({ orgs: [], ignoredPeers: [], machinePreferences: {}, demoMode: true, localApi: false, desktopNotifications: false, inventoryPath: null }),
   refreshNow: () => invoke<void>("refresh_now"),
-  addOrg: (login: string, auth: OrgAuth, token: string | null, repoScope: RepoScope) =>
-    updateConfig("add_org", { login, auth, token, repoScope }),
+  addOrg: (login: string, auth: OrgAuth, token: string | null, setup: AccountSetup) =>
+    updateConfig("add_org", { login, auth, token, setup }),
   getGhStatus: (): Promise<GhStatus> =>
     isTauri
       ? invoke("get_gh_status")
       : Promise.resolve({ installed: false, path: null, host: "github.com", login: null, scopes: [], missingRunnersScope: false, problem: "Only in the desktop app", fix: null }),
   useGhForOrg: (login: string) => updateConfig("use_gh_for_org", { login }),
   updateOrgToken: (login: string, token: string) => updateConfig("update_org_token", { login, token }),
-  setOrgScope: (login: string, repoScope: RepoScope) => updateConfig("set_org_scope", { login, repoScope }),
+  setOrgScope: (login: string, repoScope: RepoScope, runnerRepos: string[]) =>
+    updateConfig("set_org_scope", { login, repoScope, runnerRepos }),
   removeOrg: (login: string) => updateConfig("remove_org", { login }),
   ignorePeer: (nodeId: string) => updateConfig("ignore_peer", { nodeId }),
   unignorePeer: (nodeId: string) => updateConfig("unignore_peer", { nodeId }),

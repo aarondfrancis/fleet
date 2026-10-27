@@ -12,8 +12,9 @@ accepting feature requests, but you're welcome to fork it and make it your own.
 - **Mac app** (Tauri 2 + React). Machines come from your tailnet. The sidebar lists each runner
   machine with its runners nested under it, below a fleet overview. A machine's pane shows its
   status, SSH health, diagnostics, inventory configuration, runner checks and pending changes.
-  A runner's pane shows its GitHub and service state, its jobs, and how it compares with the
-  inventory.
+  A runner's pane shows its GitHub and service state, its jobs, how it compares with the
+  inventory, and whether it's behind the latest `actions/runner` release (overdue once it has
+  missed one for 30 days, when GitHub stops sending it jobs).
 - **SSH monitoring** reads CPU, load, memory, free disk, uptime and runner configuration from
   the machines. Nothing is installed on the machines.
 - **Event history and alerts** keep observed connections, reboots and runner service changes
@@ -53,14 +54,17 @@ always uses demo data.
 
 1. Create your inventory: see [Setup](docs/FLEET.md#setup) in the operating guide. The browser
    preview and tests work without one.
-2. **Settings (⌘,) ▸ GitHub ▸ Add organization…**. By default it uses your GitHub CLI login:
+2. **Settings (⌘,) ▸ GitHub ▸ Add organization or account…**. By default it uses your GitHub CLI login:
    the app asks `gh` for its token when it needs one and keeps it in memory only. Listing an
    organization's runners needs an organization owner and the `admin:org` scope. If your login
    lacks the scope, Settings shows the fix:
    `gh auth refresh --hostname github.com --scopes admin:org`. For monitoring, you can paste a
    fine-grained token instead (organization permission **Self-hosted runners: Read**,
    repository permission **Actions: Read**), which is stored in your Keychain. Access is checked
-   before anything is saved.
+   before anything is saved. To also watch repository-level runners, list their repositories;
+   that needs repository admin access (**Administration: Read**). A personal account can only
+   have repository runners. They're monitoring only: inventory changes cover organization
+   runners.
 3. Machines come from your tailnet; there's no Add step. Machines in the inventory or with
    runners on GitHub are listed under **Machines**. Other desktop and server machines sit in a
    collapsed **Other machines** group, where you can **Ignore** them (reversible under

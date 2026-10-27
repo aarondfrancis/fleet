@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 
 use crate::machine::{DiskStats, MachineReport, OsFamily};
+use crate::runner_version::{RunnerRelease, RunnerUpdate};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -93,6 +94,46 @@ pub struct OrgConfig {
     /// Where the API token comes from.
     #[serde(default)]
     pub auth: OrgAuth,
+    #[serde(default)]
+    pub kind: AccountKind,
+    /// Repositories (names without the owner) whose repository-level runners are shown too.
+    /// Monitoring only: inventory changes cover organization runners.
+    #[serde(default)]
+    pub runner_repos: Vec<String>,
+}
+
+impl OrgConfig {
+    /// The repositories to scan for jobs. A personal account's runners only take jobs from
+    /// their own repositories, so it scans its runner repositories.
+    pub fn job_scope(&self) -> RepoScope {
+        match self.kind {
+            AccountKind::Organization => self.repo_scope.clone(),
+            AccountKind::User => RepoScope::Selected {
+                repos: self.runner_repos.clone(),
+            },
+        }
+    }
+}
+
+/// What an added GitHub account is.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS, schemars::JsonSchema)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub enum AccountKind {
+    #[default]
+    Organization,
+    /// A personal account, which can only have repository-level runners.
+    User,
+}
+
+/// How to watch an account being added.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, schemars::JsonSchema)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountSetup {
+    pub kind: AccountKind,
+    pub repo_scope: RepoScope,
+    pub runner_repos: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS, schemars::JsonSchema)]
@@ -153,6 +194,10 @@ pub struct Observations {
     pub github: BTreeMap<String, OrgObservation>,
     /// Keyed by [`inventory_machine_key`] or [`tailnet_machine_key`].
     pub machines: BTreeMap<String, MachineObservation>,
+    /// Recent `actions/runner` releases.
+    pub runner_releases: Option<Timed<Vec<RunnerRelease>>>,
+    /// The last attempt to read them, successful or not.
+    pub runner_releases_checked_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -209,6 +254,10 @@ pub struct OrgObservation {
     pub jobs_error: Option<Timed<String>>,
     pub rate_limit: Option<RateLimit>,
     pub missing_token: bool,
+    /// Repository-level runners by `owner/name`, each with its own read time.
+    pub repo_runners: BTreeMap<String, Timed<Vec<GhRunner>>>,
+    /// Why a runner repository couldn't be listed in the latest poll, by `owner/name`.
+    pub repo_errors: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -454,6 +503,10 @@ pub struct GithubRunnerFacts {
     pub ephemeral: Option<bool>,
     pub as_of: DateTime<Utc>,
     pub stale: bool,
+    /// `owner/name` for a repository-level runner; None for an organization runner.
+    pub repo: Option<String>,
+    /// Set when `version` is behind the latest `actions/runner` release.
+    pub update: Option<RunnerUpdate>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, schemars::JsonSchema)]
@@ -528,6 +581,8 @@ pub struct OrgStatusView {
     pub repos_scanned: u32,
     pub jobs_truncated: bool,
     pub error: Option<String>,
+    /// `owner/name: reason` for each runner repository that couldn't be listed.
+    pub runner_repo_errors: Vec<String>,
     pub rate_limit: Option<RateLimit>,
     pub repo_scope: RepoScope,
     pub auth: OrgAuth,

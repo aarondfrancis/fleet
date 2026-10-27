@@ -1,6 +1,7 @@
 //! Runner Dashboard core, independent of the UI shell.
 //!
 //! - `github`, `gh`, `tailscale`, `machine`: read-only data sources
+//! - `runner_version`: runner versions compared with recent `actions/runner` releases
 //! - `engine`: config, secrets, polling and user actions
 //! - `derive`: pure `(config, observations, plan inputs, now, source) -> FleetView`
 //! - `issues`: the attention findings attached to each view
@@ -26,6 +27,7 @@ pub mod machine;
 pub mod machine_diagnostics;
 pub mod model;
 pub mod monitoring;
+pub mod runner_version;
 pub mod sync;
 pub mod tailscale;
 

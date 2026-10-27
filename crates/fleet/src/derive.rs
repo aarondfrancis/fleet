@@ -164,14 +164,18 @@ fn plan_status(plan: &FleetPlanInputs, checked: Option<&machines::Checked>) -> F
 struct GhEntry {
     key: String,
     org: String,
+    /// `owner/name` for a repository-level runner.
+    repo: Option<String>,
     runner: GhRunner,
     at: DateTime<Utc>,
     stale: bool,
+    update: Option<crate::runner_version::RunnerUpdate>,
 }
 
 struct GithubIndex {
     runners: Vec<GhEntry>,
-    /// (org, lowercase name) -> index
+    /// (org, lowercase name) -> index, for organization runners only: repository runners are
+    /// monitoring only and never join inventory hosts.
     by_name: HashMap<(String, String), usize>,
     /// (org, runner id) -> in-progress job
     jobs_by_runner: HashMap<(String, u64), GhJob>,
@@ -184,20 +188,35 @@ impl GithubIndex {
             by_name: HashMap::new(),
             jobs_by_runner: HashMap::new(),
         };
+        let releases = obs
+            .runner_releases
+            .as_ref()
+            .filter(|r| now - r.at <= crate::runner_version::RELEASES_USABLE_FOR)
+            .map(|r| r.value.as_slice())
+            .unwrap_or_default();
         for org_cfg in &config.orgs {
             let org = org_cfg.login.to_lowercase();
             let Some(o) = obs.github.get(&org) else { continue };
-            if let Some(runners) = &o.runners {
+            let lists = o.runners.iter().map(|r| (None, r));
+            let repo_lists = o.repo_runners.iter().map(|(repo, r)| (Some(repo), r));
+            for (repo, runners) in lists.chain(repo_lists) {
                 let stale = now - runners.at > GITHUB_STALE_AFTER;
                 for r in &runners.value {
-                    let i = idx.runners.len();
-                    idx.by_name.insert((org.clone(), r.name.to_lowercase()), i);
+                    if repo.is_none() {
+                        idx.by_name
+                            .insert((org.clone(), r.name.to_lowercase()), idx.runners.len());
+                    }
                     idx.runners.push(GhEntry {
                         key: format!("gh:{org}:{}", r.id),
                         org: org.clone(),
+                        repo: repo.cloned(),
                         runner: r.clone(),
                         at: runners.at,
                         stale,
+                        update: r
+                            .version
+                            .as_deref()
+                            .and_then(|v| crate::runner_version::update(v, releases, now)),
                     });
                 }
             }
@@ -273,6 +292,8 @@ fn runner_view(
         ephemeral: e.runner.ephemeral,
         as_of: e.at,
         stale: e.stale,
+        repo: e.repo.clone(),
+        update: e.update.clone(),
     });
     let local_facts = local.map(|(l, at, stale)| LocalRunnerFacts {
         install_dir: l.path.clone(),
@@ -401,7 +422,7 @@ fn queue_view(
     let by_key: HashMap<&str, &RunnerView> = runners.iter().map(|r| (r.key.as_str(), *r)).collect();
 
     for org_cfg in &config.orgs {
-        if matches!(org_cfg.repo_scope, RepoScope::None) {
+        if matches!(org_cfg.job_scope(), RepoScope::None) {
             view.complete = false;
             continue;
         }
@@ -422,7 +443,11 @@ fn queue_view(
             let compatible: Vec<&GhEntry> = gh
                 .runners
                 .iter()
-                .filter(|r| r.org == org && labels::is_compatible(&job.labels, &r.runner.labels))
+                .filter(|r| {
+                    r.org == org
+                        && r.repo.as_ref().is_none_or(|repo| repo.eq_ignore_ascii_case(&job.repo))
+                        && labels::is_compatible(&job.labels, &r.runner.labels)
+                })
                 .collect();
             if compatible.is_empty() && !labels::targets_self_hosted(&job.labels) {
                 view.other_queued += 1;
@@ -509,6 +534,9 @@ fn org_statuses(config: &AppConfig, obs: &Observations) -> Vec<OrgStatusView> {
                     (Some(error), None) | (None, Some(error)) => Some(error.value.clone()),
                     (None, None) => None,
                 }),
+                runner_repo_errors: o
+                    .map(|o| o.repo_errors.iter().map(|(repo, e)| format!("{repo}: {e}")).collect())
+                    .unwrap_or_default(),
                 rate_limit: o.and_then(|o| o.rate_limit.clone()),
                 repo_scope: cfg.repo_scope.clone(),
                 auth: cfg.auth,

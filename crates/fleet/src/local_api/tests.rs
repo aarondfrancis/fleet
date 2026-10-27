@@ -1,6 +1,6 @@
 use super::*;
 use crate::engine::{MemorySecrets, SecretStore};
-use crate::model::{OrgAuth, RepoScope};
+use crate::model::{AccountKind, AccountSetup, OrgAuth, RepoScope};
 use axum::Json;
 use axum::body::Body;
 use axum::extract::ConnectInfo;
@@ -50,8 +50,8 @@ async fn index_and_reads() {
 
     let (_, body) = call(&e, get("/v1/runners")).await;
     let runners = body["runners"].as_array().unwrap();
-    // Inventory runners, a retained legacy runner, and one hosted pool runner.
-    assert_eq!(runners.len(), 9);
+    // Inventory runners, a retained legacy runner, one hosted pool runner and a repository runner.
+    assert_eq!(runners.len(), 10);
     assert!(
         runners
             .iter()
@@ -135,7 +135,11 @@ async fn views_carry_no_secrets() {
             login,
             OrgAuth::Token,
             Some(credential),
-            RepoScope::None,
+            AccountSetup {
+                kind: AccountKind::Organization,
+                repo_scope: RepoScope::None,
+                runner_repos: Vec::new(),
+            },
             Some(api_base.clone()),
         )
         .await

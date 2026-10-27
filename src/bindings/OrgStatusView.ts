@@ -3,4 +3,8 @@ import type { OrgAuth } from "./OrgAuth";
 import type { RateLimit } from "./RateLimit";
 import type { RepoScope } from "./RepoScope";
 
-export type OrgStatusView = { login: string, hasToken: boolean, runnersAsOf: string | null, jobsAsOf: string | null, reposScanned: number, jobsTruncated: boolean, error: string | null, rateLimit: RateLimit | null, repoScope: RepoScope, auth: OrgAuth, };
+export type OrgStatusView = { login: string, hasToken: boolean, runnersAsOf: string | null, jobsAsOf: string | null, reposScanned: number, jobsTruncated: boolean, error: string | null, 
+/**
+ * `owner/name: reason` for each runner repository that couldn't be listed.
+ */
+runnerRepoErrors: Array<string>, rateLimit: RateLimit | null, repoScope: RepoScope, auth: OrgAuth, };

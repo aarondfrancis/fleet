@@ -6,7 +6,7 @@ use std::sync::Arc;
 use fleet::engine::desired::{ChangeSecrets, ReviewView};
 use fleet::engine::{Engine, EngineError};
 use fleet::fleet_plan::ChangeRequest;
-use fleet::model::{AppConfig, FleetView, OrgAuth, RepoScope};
+use fleet::model::{AccountSetup, AppConfig, FleetView, OrgAuth, RepoScope};
 use fleet::sync::MutexExt;
 use tauri::{AppHandle, State};
 
@@ -66,9 +66,9 @@ pub async fn add_org(
     login: String,
     auth: OrgAuth,
     token: Option<String>,
-    repo_scope: RepoScope,
+    setup: AccountSetup,
 ) -> Result<()> {
-    engine.add_org(&login, auth, token.as_deref(), repo_scope, None).await?;
+    engine.add_org(&login, auth, token.as_deref(), setup, None).await?;
     emit_view(&app, &engine);
     Ok(())
 }
@@ -94,8 +94,14 @@ pub async fn update_org_token(app: AppHandle, engine: EngineState<'_>, login: St
 }
 
 #[tauri::command]
-pub fn set_org_scope(app: AppHandle, engine: EngineState, login: String, repo_scope: RepoScope) -> Result<()> {
-    engine.set_org_scope(&login, repo_scope)?;
+pub fn set_org_scope(
+    app: AppHandle,
+    engine: EngineState,
+    login: String,
+    repo_scope: RepoScope,
+    runner_repos: Vec<String>,
+) -> Result<()> {
+    engine.set_org_scope(&login, repo_scope, &runner_repos)?;
     emit_view(&app, &engine);
     Ok(())
 }
