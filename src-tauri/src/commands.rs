@@ -32,13 +32,13 @@ type EngineState<'a> = State<'a, Arc<Engine>>;
 /// Picks up `gh auth refresh` / `gh auth login` done since the last poll, then polls every source now.
 pub fn refresh(engine: &Engine, poller: &Poller) {
     engine.reload_gh_credentials();
-    poller.refresh.notify_waiters();
+    poller.refresh_now();
 }
 
 pub fn switch_demo_mode(app: &AppHandle, engine: &Engine, poller: &Poller, on: bool) -> Result<()> {
     engine.set_demo_mode(on)?;
     if !on {
-        poller.refresh.notify_waiters();
+        poller.refresh_now();
     }
     emit_view(app, engine);
     Ok(())

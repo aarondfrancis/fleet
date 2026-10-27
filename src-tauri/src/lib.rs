@@ -131,8 +131,7 @@ pub fn run() {
             app.manage(engine.clone());
             let api = local_api::start(engine.clone(), app.path().app_config_dir()?);
             app.manage(api);
-            let poller = poller::start(app.handle().clone(), engine);
-            app.manage(poller);
+            poller::start(app.handle().clone(), engine);
 
             app.set_menu(build_menu(app.handle())?)?;
             app.on_menu_event(|app, event| match event.id().as_ref() {

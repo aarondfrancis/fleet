@@ -35,19 +35,14 @@ impl Snapshot {
         let view = tokio::task::spawn_blocking(move || engine.view())
             .await
             .map_err(|e| ApiError::internal(format!("Couldn't read the fleet: {e}")))?;
-        let mut content = serde_json::to_value(&view).map_err(|e| ApiError::internal(e.to_string()))?;
-        content
-            .as_object_mut()
-            .expect("FleetView serializes as an object")
-            .remove("generatedAt");
         Ok(Self {
-            revision: fingerprint(&content),
+            revision: super::revision(&view).map_err(|e| ApiError::internal(e.to_string()))?,
             view: Arc::new(view),
         })
     }
 }
 
-fn fingerprint(value: &Value) -> String {
+pub(super) fn fingerprint(value: &Value) -> String {
     let mut hash = std::collections::hash_map::DefaultHasher::new();
     value.to_string().hash(&mut hash);
     format!("{:016x}", hash.finish())
