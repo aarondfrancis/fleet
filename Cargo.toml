@@ -46,3 +46,9 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Strip only the shipped binaries. On macOS 27, stripped proc-macro dylibs fail to
+# load ("mis-aligned LINKEDIT string pool"), which breaks `pnpm tauri build` with
+# "can't find crate for `time_macros`" even on a clean checkout.
+[profile.release.build-override]
+strip = false
