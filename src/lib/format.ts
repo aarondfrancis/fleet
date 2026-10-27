@@ -57,6 +57,13 @@ export function formatUptime(secs: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+/** A duration in seconds: `45s`, `12m 5s`, then as uptime (`3h 12m`, `2d 4h`). */
+export function formatSeconds(secs: number): string {
+  if (secs < 60) return `${Math.round(secs)}s`;
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`;
+  return formatUptime(secs);
+}
+
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
 }

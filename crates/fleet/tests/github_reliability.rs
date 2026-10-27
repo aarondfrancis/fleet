@@ -366,3 +366,107 @@ async fn absent_secret_is_reported_from_either_poll() {
         );
     }
 }
+
+/// One org runner and run 5, in progress until `done`; then its jobs are completed, or the run
+/// is gone (404) when `gone`. Counts reads of the run's jobs.
+async fn fake_run(done: Arc<AtomicBool>, reads: Arc<AtomicUsize>, gone: bool) -> String {
+    let runs_done = done.clone();
+    let app = Router::new()
+        .route("/orgs/{org}/actions/runners", get(|| async {
+            Json(json!({"total_count": 1, "runners": [{"id": 7, "name": "fake", "status": "online", "busy": true, "labels": [{"name": "self-hosted"}]}]}))
+        }))
+        .route("/repos/{org}/{repo}/actions/runs", get(move |Query(q): Query<HashMap<String, String>>| {
+            let done = runs_done.load(Ordering::SeqCst);
+            async move {
+                let runs = if q["status"] == "in_progress" && !done { json!([{"id": 5}]) } else { json!([]) };
+                Json(json!({"total_count": runs.as_array().unwrap().len(), "workflow_runs": runs}))
+            }
+        }))
+        .route("/repos/{org}/{repo}/actions/runs/{run}/jobs", get(move |Query(q): Query<HashMap<String, String>>| {
+            reads.fetch_add(1, Ordering::SeqCst);
+            let done = done.load(Ordering::SeqCst);
+            async move {
+                if !done {
+                    assert_eq!(q["filter"], "latest", "the scan reads the latest attempt");
+                } else {
+                    assert_eq!(q["filter"], "all", "history reads every attempt");
+                    if gone {
+                        return (StatusCode::NOT_FOUND, Json(json!({"message": "Not Found"})));
+                    }
+                }
+                let status = if done { "completed" } else { "in_progress" };
+                let ago = |minutes| (Utc::now() - chrono::Duration::minutes(minutes)).to_rfc3339();
+                let times = json!({"created_at": ago(6), "started_at": ago(5), "completed_at": ago(1)});
+                let mut own = json!({"id": 51, "run_id": 5, "name": "build", "status": status, "conclusion": "success",
+                    "labels": ["self-hosted"], "runner_id": 7, "runner_name": "fake"});
+                let mut hosted = json!({"id": 52, "run_id": 5, "name": "lint", "status": "completed", "conclusion": "success",
+                    "labels": ["ubuntu-latest"], "runner_id": 99, "runner_name": "GitHub Actions 1"});
+                for job in [&mut own, &mut hosted] {
+                    job.as_object_mut().unwrap().extend(times.as_object().unwrap().clone());
+                }
+                (StatusCode::OK, Json(json!({"total_count": 2, "jobs": [own, hosted]})))
+            }
+        }));
+    serve(app).await
+}
+
+fn fake_secrets() -> Arc<MemorySecrets> {
+    let secrets = Arc::new(MemorySecrets::default());
+    secrets.set("acme", "fake").unwrap();
+    secrets
+}
+
+fn recent_ids(engine: &Engine) -> Vec<u64> {
+    engine.view().activity.recent.iter().map(|j| j.id).collect()
+}
+
+#[tokio::test]
+async fn finished_runs_are_read_once_and_their_self_hosted_jobs_kept() {
+    let (done, reads) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicUsize::new(0)));
+    let base = fake_run(done.clone(), reads.clone(), false).await;
+    let dir = tempfile::tempdir().unwrap();
+    let engine = configured_engine(dir.path(), base.clone(), fake_secrets());
+    engine.poll_github_runners().await;
+    engine.poll_github_jobs().await;
+    assert_eq!(reads.load(Ordering::SeqCst), 1, "the scan reads the in-flight run");
+
+    done.store(true, Ordering::SeqCst);
+    engine.poll_github_jobs().await;
+    engine.poll_github_jobs().await;
+    assert_eq!(reads.load(Ordering::SeqCst), 2, "a finished run is read once");
+    assert_eq!(recent_ids(&engine), vec![51]);
+    assert_eq!(
+        recent_ids(&configured_engine(dir.path(), base, fake_secrets())),
+        vec![51]
+    );
+}
+
+#[tokio::test]
+async fn a_deleted_run_is_dropped() {
+    let (done, reads) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicUsize::new(0)));
+    let base = fake_run(done.clone(), reads.clone(), true).await;
+    let dir = tempfile::tempdir().unwrap();
+    let engine = configured_engine(dir.path(), base, fake_secrets());
+    engine.poll_github_runners().await;
+    engine.poll_github_jobs().await;
+    done.store(true, Ordering::SeqCst);
+    engine.poll_github_jobs().await;
+    engine.poll_github_jobs().await;
+    assert_eq!(reads.load(Ordering::SeqCst), 2, "a 404 isn't retried");
+    assert!(recent_ids(&engine).is_empty());
+}
+
+#[tokio::test]
+async fn demo_mode_never_creates_job_history() {
+    let (done, reads) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicUsize::new(0)));
+    let base = fake_run(done.clone(), reads, false).await;
+    let dir = tempfile::tempdir().unwrap();
+    let engine = configured_engine(dir.path(), base, fake_secrets());
+    engine.set_demo_mode(true).unwrap();
+    engine.poll_github_runners().await;
+    engine.poll_github_jobs().await;
+    done.store(true, Ordering::SeqCst);
+    engine.poll_github_jobs().await;
+    assert!(!engine.view().activity.recent.is_empty(), "demo history is shown");
+    assert!(!dir.path().join("job-history.json").exists());
+}

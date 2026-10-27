@@ -2055,5 +2055,620 @@
         "detail": "Started observing this machine. Earlier events are not known."
       }
     ]
+  },
+  "activity": {
+    "recordingSince": "2026-09-03T22:00:00Z",
+    "storageError": null,
+    "windows": [
+      {
+        "days": 1,
+        "recordedSecs": 50400,
+        "jobs": 46,
+        "succeeded": 40,
+        "failed": 5,
+        "runnerSecs": 79440,
+        "queueMedianSecs": 76,
+        "queueP95Secs": 667,
+        "machines": [
+          {
+            "machineId": "ts:nLinux",
+            "name": "build-linux-01",
+            "runners": 2,
+            "busySecs": 16620,
+            "busyPercent": 16.488095238095237
+          },
+          {
+            "machineId": "ts:nMini",
+            "name": "mac-mini-02",
+            "runners": 1,
+            "busySecs": 21420,
+            "busyPercent": 42.5
+          },
+          {
+            "machineId": "ts:nStudio",
+            "name": "studio",
+            "runners": 3,
+            "busySecs": 37980,
+            "busyPercent": 25.11904761904762
+          },
+          {
+            "machineId": "ts:nWin",
+            "name": "win-builder",
+            "runners": 1,
+            "busySecs": 3420,
+            "busyPercent": 6.785714285714286
+          }
+        ],
+        "repos": [
+          {
+            "repo": "acme-demo/infra",
+            "jobs": 10,
+            "runnerSecs": 22680
+          },
+          {
+            "repo": "acme-demo/web",
+            "jobs": 11,
+            "runnerSecs": 22140
+          },
+          {
+            "repo": "acme-demo/ios-app",
+            "jobs": 13,
+            "runnerSecs": 21960
+          },
+          {
+            "repo": "acme-demo/api",
+            "jobs": 12,
+            "runnerSecs": 12660
+          }
+        ],
+        "hosted": [
+          {
+            "os": "linux",
+            "minutes": 277,
+            "usdPerMinute": 0.006,
+            "usd": 1.6620000000000001
+          },
+          {
+            "os": "windows",
+            "minutes": 57,
+            "usdPerMinute": 0.01,
+            "usd": 0.5700000000000001
+          },
+          {
+            "os": "macos",
+            "minutes": 990,
+            "usdPerMinute": 0.062,
+            "usd": 61.38
+          }
+        ]
+      },
+      {
+        "days": 7,
+        "recordedSecs": 352800,
+        "jobs": 391,
+        "succeeded": 347,
+        "failed": 34,
+        "runnerSecs": 642480,
+        "queueMedianSecs": 75,
+        "queueP95Secs": 688,
+        "machines": [
+          {
+            "machineId": "ts:nLinux",
+            "name": "build-linux-01",
+            "runners": 2,
+            "busySecs": 155220,
+            "busyPercent": 21.99829931972789
+          },
+          {
+            "machineId": "ts:nMini",
+            "name": "mac-mini-02",
+            "runners": 1,
+            "busySecs": 134820,
+            "busyPercent": 38.21428571428571
+          },
+          {
+            "machineId": "ts:nStudio",
+            "name": "studio",
+            "runners": 3,
+            "busySecs": 289320,
+            "busyPercent": 27.335600907029477
+          },
+          {
+            "machineId": "ts:nWin",
+            "name": "win-builder",
+            "runners": 1,
+            "busySecs": 63120,
+            "busyPercent": 17.891156462585034
+          }
+        ],
+        "repos": [
+          {
+            "repo": "acme-demo/ios-app",
+            "jobs": 106,
+            "runnerSecs": 175140
+          },
+          {
+            "repo": "acme-demo/api",
+            "jobs": 94,
+            "runnerSecs": 160380
+          },
+          {
+            "repo": "acme-demo/web",
+            "jobs": 100,
+            "runnerSecs": 158940
+          },
+          {
+            "repo": "acme-demo/infra",
+            "jobs": 91,
+            "runnerSecs": 148020
+          }
+        ],
+        "hosted": [
+          {
+            "os": "linux",
+            "minutes": 2587,
+            "usdPerMinute": 0.006,
+            "usd": 15.522
+          },
+          {
+            "os": "windows",
+            "minutes": 1052,
+            "usdPerMinute": 0.01,
+            "usd": 10.52
+          },
+          {
+            "os": "macos",
+            "minutes": 7069,
+            "usdPerMinute": 0.062,
+            "usd": 438.278
+          }
+        ]
+      },
+      {
+        "days": 30,
+        "recordedSecs": 1411200,
+        "jobs": 1558,
+        "succeeded": 1398,
+        "failed": 112,
+        "runnerSecs": 2530740,
+        "queueMedianSecs": 77,
+        "queueP95Secs": 673,
+        "machines": [
+          {
+            "machineId": "ts:nLinux",
+            "name": "build-linux-01",
+            "runners": 2,
+            "busySecs": 623160,
+            "busyPercent": 22.07908163265306
+          },
+          {
+            "machineId": "ts:nMini",
+            "name": "mac-mini-02",
+            "runners": 1,
+            "busySecs": 528660,
+            "busyPercent": 37.46173469387755
+          },
+          {
+            "machineId": "ts:nStudio",
+            "name": "studio",
+            "runners": 3,
+            "busySecs": 1157880,
+            "busyPercent": 27.349773242630388
+          },
+          {
+            "machineId": "ts:nWin",
+            "name": "win-builder",
+            "runners": 1,
+            "busySecs": 221040,
+            "busyPercent": 15.663265306122447
+          }
+        ],
+        "repos": [
+          {
+            "repo": "acme-demo/infra",
+            "jobs": 396,
+            "runnerSecs": 650700
+          },
+          {
+            "repo": "acme-demo/web",
+            "jobs": 395,
+            "runnerSecs": 634260
+          },
+          {
+            "repo": "acme-demo/api",
+            "jobs": 382,
+            "runnerSecs": 627900
+          },
+          {
+            "repo": "acme-demo/ios-app",
+            "jobs": 385,
+            "runnerSecs": 617880
+          }
+        ],
+        "hosted": [
+          {
+            "os": "linux",
+            "minutes": 10386,
+            "usdPerMinute": 0.006,
+            "usd": 62.316
+          },
+          {
+            "os": "windows",
+            "minutes": 3684,
+            "usdPerMinute": 0.01,
+            "usd": 36.84
+          },
+          {
+            "os": "macos",
+            "minutes": 28109,
+            "usdPerMinute": 0.062,
+            "usd": 1742.758
+          }
+        ]
+      }
+    ],
+    "recent": [
+      {
+        "id": 51553,
+        "org": "acme-demo",
+        "repo": "acme-demo/ios-app",
+        "name": "test",
+        "workflowName": "Nightly",
+        "labels": [
+          "macOS",
+          "self-hosted"
+        ],
+        "conclusion": "success",
+        "runnerName": "Studio-Old-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T10:53:00Z",
+        "startedAt": "2026-10-03T10:53:51Z",
+        "completedAt": "2026-10-03T11:32:51Z",
+        "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/515530/job/51553"
+      },
+      {
+        "id": 51532,
+        "org": "acme-demo",
+        "repo": "acme-demo/web",
+        "name": "test",
+        "workflowName": "Nightly",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "mini-02",
+        "os": "macos",
+        "createdAt": "2026-10-03T10:50:00Z",
+        "startedAt": "2026-10-03T10:50:42Z",
+        "completedAt": "2026-10-03T11:29:42Z",
+        "htmlUrl": "https://github.com/acme-demo/web/actions/runs/515320/job/51532"
+      },
+      {
+        "id": 51522,
+        "org": "acme-demo",
+        "repo": "acme-demo/web",
+        "name": "build",
+        "workflowName": "Release",
+        "labels": [
+          "self-hosted",
+          "Linux"
+        ],
+        "conclusion": "success",
+        "runnerName": "linux-01-b",
+        "os": "linux",
+        "createdAt": "2026-10-03T10:22:00Z",
+        "startedAt": "2026-10-03T10:23:26Z",
+        "completedAt": "2026-10-03T11:07:26Z",
+        "htmlUrl": "https://github.com/acme-demo/web/actions/runs/515220/job/51522"
+      },
+      {
+        "id": 51543,
+        "org": "acme-demo",
+        "repo": "acme-demo/ios-app",
+        "name": "build",
+        "workflowName": "Release",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "studio-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T10:25:00Z",
+        "startedAt": "2026-10-03T10:26:35Z",
+        "completedAt": "2026-10-03T10:56:35Z",
+        "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/515430/job/51543"
+      },
+      {
+        "id": 51531,
+        "org": "acme-demo",
+        "repo": "acme-demo/ios-app",
+        "name": "build",
+        "workflowName": "Release",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "mini-02",
+        "os": "macos",
+        "createdAt": "2026-10-03T09:19:00Z",
+        "startedAt": "2026-10-03T09:20:11Z",
+        "completedAt": "2026-10-03T09:59:11Z",
+        "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/515310/job/51531"
+      },
+      {
+        "id": 51552,
+        "org": "acme-demo",
+        "repo": "acme-demo/api",
+        "name": "build",
+        "workflowName": "Release",
+        "labels": [
+          "macOS",
+          "self-hosted"
+        ],
+        "conclusion": "success",
+        "runnerName": "Studio-Old-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T09:22:00Z",
+        "startedAt": "2026-10-03T09:23:20Z",
+        "completedAt": "2026-10-03T09:53:20Z",
+        "htmlUrl": "https://github.com/acme-demo/api/actions/runs/515520/job/51552"
+      },
+      {
+        "id": 51557,
+        "org": "acme-demo",
+        "repo": "acme-demo/api",
+        "name": "test",
+        "workflowName": "CI",
+        "labels": [
+          "self-hosted",
+          "Windows"
+        ],
+        "conclusion": "success",
+        "runnerName": "win-builder",
+        "os": "windows",
+        "createdAt": "2026-10-03T08:36:00Z",
+        "startedAt": "2026-10-03T08:46:28Z",
+        "completedAt": "2026-10-03T08:52:28Z",
+        "htmlUrl": "https://github.com/acme-demo/api/actions/runs/515570/job/51557"
+      },
+      {
+        "id": 51515,
+        "org": "acme-demo",
+        "repo": "acme-demo/web",
+        "name": "test",
+        "workflowName": "CI",
+        "labels": [
+          "self-hosted",
+          "Linux"
+        ],
+        "conclusion": "success",
+        "runnerName": "linux-01-a",
+        "os": "linux",
+        "createdAt": "2026-10-03T08:30:00Z",
+        "startedAt": "2026-10-03T08:30:10Z",
+        "completedAt": "2026-10-03T08:50:10Z",
+        "htmlUrl": "https://github.com/acme-demo/web/actions/runs/515150/job/51515"
+      },
+      {
+        "id": 51521,
+        "org": "acme-demo",
+        "repo": "acme-demo/ios-app",
+        "name": "test",
+        "workflowName": "CI",
+        "labels": [
+          "self-hosted",
+          "Linux"
+        ],
+        "conclusion": "success",
+        "runnerName": "linux-01-b",
+        "os": "linux",
+        "createdAt": "2026-10-03T08:15:00Z",
+        "startedAt": "2026-10-03T08:16:55Z",
+        "completedAt": "2026-10-03T08:46:55Z",
+        "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/515210/job/51521"
+      },
+      {
+        "id": 51536,
+        "org": "acme-demo",
+        "repo": "acme-demo/ios-app",
+        "name": "test",
+        "workflowName": "CI",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "studio-1",
+        "os": "macos",
+        "createdAt": "2026-10-03T08:33:00Z",
+        "startedAt": "2026-10-03T08:33:19Z",
+        "completedAt": "2026-10-03T08:46:19Z",
+        "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/515360/job/51536"
+      },
+      {
+        "id": 51542,
+        "org": "acme-demo",
+        "repo": "acme-demo/api",
+        "name": "test",
+        "workflowName": "CI",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "studio-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T08:18:00Z",
+        "startedAt": "2026-10-03T08:20:04Z",
+        "completedAt": "2026-10-03T08:36:04Z",
+        "htmlUrl": "https://github.com/acme-demo/api/actions/runs/515420/job/51542"
+      },
+      {
+        "id": 51551,
+        "org": "acme-demo",
+        "repo": "acme-demo/infra",
+        "name": "test",
+        "workflowName": "CI",
+        "labels": [
+          "macOS",
+          "self-hosted"
+        ],
+        "conclusion": "success",
+        "runnerName": "Studio-Old-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T07:51:00Z",
+        "startedAt": "2026-10-03T07:52:49Z",
+        "completedAt": "2026-10-03T08:31:49Z",
+        "htmlUrl": "https://github.com/acme-demo/infra/actions/runs/515510/job/51551"
+      },
+      {
+        "id": 51530,
+        "org": "acme-demo",
+        "repo": "acme-demo/api",
+        "name": "test",
+        "workflowName": "CI",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "failure",
+        "runnerName": "mini-02",
+        "os": "macos",
+        "createdAt": "2026-10-03T07:48:00Z",
+        "startedAt": "2026-10-03T07:49:40Z",
+        "completedAt": "2026-10-03T08:19:40Z",
+        "htmlUrl": "https://github.com/acme-demo/api/actions/runs/515300/job/51530"
+      },
+      {
+        "id": 51550,
+        "org": "acme-demo",
+        "repo": "acme-demo/web",
+        "name": "build",
+        "workflowName": "Nightly",
+        "labels": [
+          "macOS",
+          "self-hosted"
+        ],
+        "conclusion": "success",
+        "runnerName": "Studio-Old-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T06:50:00Z",
+        "startedAt": "2026-10-03T06:50:18Z",
+        "completedAt": "2026-10-03T07:29:18Z",
+        "htmlUrl": "https://github.com/acme-demo/web/actions/runs/515500/job/51550"
+      },
+      {
+        "id": 51529,
+        "org": "acme-demo",
+        "repo": "acme-demo/infra",
+        "name": "build",
+        "workflowName": "Nightly",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "mini-02",
+        "os": "macos",
+        "createdAt": "2026-10-03T06:47:00Z",
+        "startedAt": "2026-10-03T06:49:09Z",
+        "completedAt": "2026-10-03T07:28:09Z",
+        "htmlUrl": "https://github.com/acme-demo/infra/actions/runs/515290/job/51529"
+      },
+      {
+        "id": 51541,
+        "org": "acme-demo",
+        "repo": "acme-demo/infra",
+        "name": "build",
+        "workflowName": "Nightly",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "studio-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T06:11:00Z",
+        "startedAt": "2026-10-03T06:11:33Z",
+        "completedAt": "2026-10-03T07:03:33Z",
+        "htmlUrl": "https://github.com/acme-demo/infra/actions/runs/515410/job/51541"
+      },
+      {
+        "id": 51520,
+        "org": "acme-demo",
+        "repo": "acme-demo/api",
+        "name": "build",
+        "workflowName": "Nightly",
+        "labels": [
+          "self-hosted",
+          "Linux"
+        ],
+        "conclusion": "failure",
+        "runnerName": "linux-01-b",
+        "os": "linux",
+        "createdAt": "2026-10-03T06:08:00Z",
+        "startedAt": "2026-10-03T06:08:24Z",
+        "completedAt": "2026-10-03T06:24:24Z",
+        "htmlUrl": "https://github.com/acme-demo/api/actions/runs/515200/job/51520"
+      },
+      {
+        "id": 51549,
+        "org": "acme-demo",
+        "repo": "acme-demo/ios-app",
+        "name": "test",
+        "workflowName": "Release",
+        "labels": [
+          "macOS",
+          "self-hosted"
+        ],
+        "conclusion": "success",
+        "runnerName": "Studio-Old-2",
+        "os": "macos",
+        "createdAt": "2026-10-03T05:19:00Z",
+        "startedAt": "2026-10-03T05:19:47Z",
+        "completedAt": "2026-10-03T05:58:47Z",
+        "htmlUrl": "https://github.com/acme-demo/ios-app/actions/runs/515490/job/51549"
+      },
+      {
+        "id": 51528,
+        "org": "acme-demo",
+        "repo": "acme-demo/web",
+        "name": "test",
+        "workflowName": "Release",
+        "labels": [
+          "self-hosted",
+          "macOS"
+        ],
+        "conclusion": "success",
+        "runnerName": "mini-02",
+        "os": "macos",
+        "createdAt": "2026-10-03T05:16:00Z",
+        "startedAt": "2026-10-03T05:16:38Z",
+        "completedAt": "2026-10-03T05:55:38Z",
+        "htmlUrl": "https://github.com/acme-demo/web/actions/runs/515280/job/51528"
+      },
+      {
+        "id": 51556,
+        "org": "acme-demo",
+        "repo": "acme-demo/infra",
+        "name": "build",
+        "workflowName": "Nightly",
+        "labels": [
+          "self-hosted",
+          "Windows"
+        ],
+        "conclusion": "success",
+        "runnerName": "win-builder",
+        "os": "windows",
+        "createdAt": "2026-10-03T05:29:00Z",
+        "startedAt": "2026-10-03T05:29:57Z",
+        "completedAt": "2026-10-03T05:53:57Z",
+        "htmlUrl": "https://github.com/acme-demo/infra/actions/runs/515560/job/51556"
+      }
+    ],
+    "ratesAsOf": "2026-10-27"
   }
 }

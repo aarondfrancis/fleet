@@ -4,6 +4,7 @@ import type { FleetView } from "../bindings/FleetView";
 import { findMachine, findRunner, selectionId, type Selection } from "../lib/nav";
 import { commands, isLive, isTauri } from "../lib/tauri";
 import { useUi } from "../store";
+import { ActivityDetail } from "./details/ActivityDetail";
 import { IgnoredDetail } from "./details/IgnoredDetail";
 import { MachineDetail } from "./details/MachineDetail";
 import { Overview } from "./details/Overview";
@@ -31,6 +32,7 @@ export function DetailPane({ view, selection }: { view: FleetView; selection: Se
   const crumbs: { label: string; selection?: Selection }[] = [{ label: "Fleet", selection: { kind: "overview" } }];
   if (selection.kind === "overview") crumbs.push({ label: "Fleet overview" });
   if (selection.kind === "queue") crumbs.push({ label: "Queued jobs" });
+  if (selection.kind === "activity") crumbs.push({ label: "Activity" });
   if (selection.kind === "ignored") crumbs.push({ label: "Ignored machines" });
   if (machine) crumbs.push({ label: machine.displayName, selection: { kind: "machine", id: machine.id } });
   if (runner) crumbs.push({ label: runner.name });
@@ -39,6 +41,7 @@ export function DetailPane({ view, selection }: { view: FleetView; selection: Se
   switch (selection.kind) {
     case "overview": body = <Overview view={view} />; break;
     case "queue": body = <QueueDetail view={view} />; break;
+    case "activity": body = <ActivityDetail view={view} />; break;
     case "machine": body = machine ? <MachineDetail machine={machine} view={view} /> : null; break;
     case "runner": body = runner ? <RunnerDetail runner={runner} view={view} /> : null; break;
     case "ignored": body = <IgnoredDetail view={view} />; break;

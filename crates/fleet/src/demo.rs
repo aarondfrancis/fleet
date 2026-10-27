@@ -284,6 +284,8 @@ fn job(
         runner_name: None,
         created_at: Some(created),
         started_at: started,
+        completed_at: None,
+        conclusion: None,
         html_url: Some(format!("https://github.com/{repo}/actions/runs/{}/job/{id}", id * 10)),
         head_branch: Some("main".into()),
     }

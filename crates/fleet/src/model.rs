@@ -248,6 +248,9 @@ pub struct GhJob {
     pub runner_name: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    /// GitHub's `conclusion` once completed: `success`, `failure`, `cancelled`, ...
+    pub conclusion: Option<String>,
     pub html_url: Option<String>,
     pub head_branch: Option<String>,
 }
@@ -300,6 +303,8 @@ pub struct FleetView {
     pub orgs: Vec<OrgStatusView>,
     pub tailnet: TailnetStatusView,
     pub monitoring: crate::monitoring::FleetMonitoring,
+    /// Finished self-hosted jobs recorded on this Mac, summarized for the Activity page.
+    pub activity: crate::job_history::FleetActivity,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS, schemars::JsonSchema)]

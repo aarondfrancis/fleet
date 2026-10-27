@@ -109,6 +109,8 @@ fn job(id: u64, runner: Option<u64>, status: &str, labels: &[&str], started: Opt
         runner_name: None,
         created_at: Some(ago(600 + i64::try_from(id).unwrap())),
         started_at: started,
+        completed_at: None,
+        conclusion: None,
         html_url: None,
         head_branch: None,
     }

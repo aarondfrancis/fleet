@@ -6,6 +6,7 @@ import type { RunnerView } from "../bindings/RunnerView";
 export type Selection =
   | { kind: "overview" }
   | { kind: "queue" }
+  | { kind: "activity" }
   | { kind: "machine"; id: string }
   | { kind: "runner"; key: string }
   | { kind: "ignored" };
@@ -14,6 +15,7 @@ export function selectionId(s: Selection): string {
   switch (s.kind) {
     case "overview":
     case "queue":
+    case "activity":
     case "ignored":
       return s.kind;
     case "machine":
@@ -77,7 +79,7 @@ export function filterNavView(view: FleetView, query: string): FleetView {
 
 /** Sidebar rows in visual order, honoring collapsed machines and groups. */
 export function flattenNav(view: FleetView, collapsed: ReadonlySet<string>, open: OpenGroups): NavItem[] {
-  const items: NavItem[] = [{ selection: { kind: "overview" } }, { selection: { kind: "queue" } }];
+  const items: NavItem[] = [{ selection: { kind: "overview" } }, { selection: { kind: "queue" } }, { selection: { kind: "activity" } }];
   for (const m of view.machines) {
     items.push({ selection: { kind: "machine", id: m.id } });
     if (!collapsed.has(m.id)) {

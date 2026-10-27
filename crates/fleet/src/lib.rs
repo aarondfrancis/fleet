@@ -5,6 +5,7 @@
 //! - `derive`: pure `(config, observations, plan inputs, now, source) -> FleetView`
 //! - `issues`: the attention findings attached to each view
 //! - `monitoring`: local machine history, alerts and notification requests
+//! - `job_history`: finished self-hosted jobs and the Activity page's numbers
 //! - `desired`, `fleet_plan`: the inventory, its checks and reviewed changes
 //! - `local_api`: the read-only loopback HTTP API
 //! - `demo`, `demo_desired`: a fictional dataset run through the same `derive`
@@ -20,6 +21,7 @@ pub mod fleet_plan;
 pub mod gh;
 pub mod github;
 pub mod issues;
+pub mod job_history;
 pub mod labels;
 pub mod local_api;
 pub mod machine;
