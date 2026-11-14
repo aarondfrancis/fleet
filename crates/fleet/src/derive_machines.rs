@@ -424,25 +424,27 @@ fn inventory_runners(
 fn checked_github(plan: &FleetPlanInputs, org: &str, name: &str, host: &Host, now: DateTime<Utc>) -> Option<GhEntry> {
     let runner = plan.snapshot.as_ref()?.github.get(name)?;
     let at = plan.checked_at?;
+    let runner = GhRunner {
+        id: u64::try_from(runner.id).ok()?,
+        name: runner.name.clone(),
+        os: match host.platform {
+            Platform::DarwinArm64 => "macOS",
+            Platform::WindowsArm64 | Platform::WindowsX64 => "Windows",
+            Platform::LinuxX64 => "Linux",
+        }
+        .into(),
+        status: runner.status.clone(),
+        busy: runner.busy,
+        labels: runner.labels.iter().cloned().collect(),
+        ephemeral: None,
+        version: None,
+        runner_group_id: None,
+        repository: runner.repository.clone(),
+    };
     Some(GhEntry {
-        key: format!("gh:{org}:{}", runner.id),
+        key: super::github_runner_key(org, &runner),
         org: org.to_string(),
-        runner: GhRunner {
-            id: u64::try_from(runner.id).ok()?,
-            name: runner.name.clone(),
-            os: match host.platform {
-                Platform::DarwinArm64 => "macOS",
-                Platform::WindowsArm64 | Platform::WindowsX64 => "Windows",
-                Platform::LinuxX64 => "Linux",
-            }
-            .into(),
-            status: runner.status.clone(),
-            busy: runner.busy,
-            labels: runner.labels.iter().cloned().collect(),
-            ephemeral: None,
-            version: None,
-            runner_group_id: None,
-        },
+        runner,
         at,
         stale: now - at > super::GITHUB_STALE_AFTER,
     })

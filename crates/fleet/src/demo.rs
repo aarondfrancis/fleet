@@ -263,6 +263,7 @@ fn gh(id: u64, name: &str, busy: bool, labels: &[&str]) -> GhRunner {
         ephemeral: Some(false),
         version: Some("2.329.0".into()),
         runner_group_id: Some(1),
+        repository: None,
     }
 }
 

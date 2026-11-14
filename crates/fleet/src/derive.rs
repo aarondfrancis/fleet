@@ -176,8 +176,19 @@ struct GithubIndex {
     runners: Vec<GhEntry>,
     /// (org, lowercase name) -> index
     by_name: HashMap<(String, String), usize>,
-    /// (org, runner id) -> in-progress job
-    jobs_by_runner: HashMap<(String, u64), GhJob>,
+    /// (org, runner id) -> in-progress jobs. Repository runners share IDs, so
+    /// [`GithubIndex::current_job`] picks the job by repository and runner name.
+    jobs_by_runner: HashMap<(String, u64), Vec<GhJob>>,
+}
+
+/// A GitHub runner's view key. An organization's runner list is one ID space,
+/// but each repository numbers its own runners, so a repository runner's key
+/// names its repository.
+pub(crate) fn github_runner_key(org: &str, runner: &GhRunner) -> String {
+    match &runner.repository {
+        Some(repository) => format!("gh:{}:{}", repository.to_lowercase(), runner.id),
+        None => format!("gh:{org}:{}", runner.id),
+    }
 }
 
 impl GithubIndex {
@@ -196,7 +207,7 @@ impl GithubIndex {
                     let i = idx.runners.len();
                     idx.by_name.insert((org.clone(), r.name.to_lowercase()), i);
                     idx.runners.push(GhEntry {
-                        key: format!("gh:{org}:{}", r.id),
+                        key: github_runner_key(&org, r),
                         org: org.clone(),
                         runner: r.clone(),
                         at: runners.at,
@@ -209,7 +220,10 @@ impl GithubIndex {
             {
                 for job in jobs.value.jobs.iter().filter(|j| j.status == "in_progress") {
                     if let Some(rid) = job.runner_id.filter(|id| *id != 0) {
-                        idx.jobs_by_runner.insert((org.clone(), rid), job.clone());
+                        idx.jobs_by_runner
+                            .entry((org.clone(), rid))
+                            .or_default()
+                            .push(job.clone());
                     }
                 }
             }
@@ -221,6 +235,29 @@ impl GithubIndex {
         self.by_name
             .get(&(org.to_string(), name.to_lowercase()))
             .map(|&i| &self.runners[i])
+    }
+
+    /// The in-progress job that ran on this runner. A repository runner takes
+    /// jobs from its own repository only, and a job's runner name must match
+    /// when GitHub gives one. Two matching jobs leave the runner unlinked.
+    fn current_job(&self, entry: &GhEntry) -> Option<&GhJob> {
+        let runner = &entry.runner;
+        let mut matching = self
+            .jobs_by_runner
+            .get(&(entry.org.clone(), runner.id))?
+            .iter()
+            .filter(|job| {
+                runner
+                    .repository
+                    .as_deref()
+                    .is_none_or(|repository| job.repo.eq_ignore_ascii_case(repository))
+                    && job
+                        .runner_name
+                        .as_deref()
+                        .is_none_or(|name| name.eq_ignore_ascii_case(&runner.name))
+            });
+        let job = matching.next()?;
+        matching.next().is_none().then_some(job)
     }
 }
 
@@ -286,9 +323,7 @@ fn runner_view(
         stale,
     });
 
-    let current_job = gh_entry
-        .and_then(|e| gh.jobs_by_runner.get(&(e.org.clone(), e.runner.id)))
-        .map(job_view);
+    let current_job = gh_entry.and_then(|e| gh.current_job(e)).map(job_view);
 
     let gh_fresh = github.as_ref().filter(|g| !g.stale);
     let local_fresh = local_facts.as_ref().filter(|l| !l.stale);

@@ -8,8 +8,9 @@ import type { Tri } from "./Tri";
 
 export type RunnerView = { 
 /**
- * Stable selection key: `gh:<org>:<id>`, or `inv:<host>:<runner>` for an
- * inventory runner GitHub doesn't list.
+ * Stable selection key: `gh:<org>:<id>` for an organization's runner,
+ * `gh:<owner>/<repo>:<id>` for a repository's runner, or
+ * `inv:<host>:<runner>` for an inventory runner GitHub doesn't list.
  */
 key: string, name: string, org: string | null, machineId: string | null, installed: Tri, connected: Tri, activity: RunnerActivity, github: GithubRunnerFacts | null, local: LocalRunnerFacts | null, 
 /**

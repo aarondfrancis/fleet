@@ -249,6 +249,10 @@ pub struct GhRunner {
     pub ephemeral: Option<bool>,
     pub version: Option<String>,
     pub runner_group_id: Option<u64>,
+    /// `owner/repo` for a runner read from a repository's runner list. GitHub
+    /// numbers repository runners per repository, so two repositories can
+    /// each have a runner with the same ID.
+    pub repository: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -454,8 +458,9 @@ pub enum RunnerActivity {
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct RunnerView {
-    /// Stable selection key: `gh:<org>:<id>`, or `inv:<host>:<runner>` for an
-    /// inventory runner GitHub doesn't list.
+    /// Stable selection key: `gh:<org>:<id>` for an organization's runner,
+    /// `gh:<owner>/<repo>:<id>` for a repository's runner, or
+    /// `inv:<host>:<runner>` for an inventory runner GitHub doesn't list.
     pub key: String,
     pub name: String,
     pub org: Option<String>,

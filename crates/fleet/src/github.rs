@@ -9,7 +9,7 @@
 //!   then `GET .../runs/{id}/jobs` (repo "Actions: read").
 //! - Every GET is conditional (ETag); a 304 doesn't count against the rate limit.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -381,7 +381,15 @@ impl GithubClient {
                 "Couldn't read all of {owner}/{repo}'s runners within {MAX_REPO_RUNNER_PAGES} pages."
             )));
         }
-        Ok(runners.items.into_iter().map(RawRunner::into_model).collect())
+        let repository = format!("{owner}/{repo}");
+        Ok(runners
+            .items
+            .into_iter()
+            .map(|raw| GhRunner {
+                repository: Some(repository.clone()),
+                ..raw.into_model()
+            })
+            .collect())
     }
 
     /// A personal account's runners, read per repository. The scope's list is used
@@ -398,8 +406,10 @@ impl GithubClient {
     /// The runners registered to each of `owner`'s `repos`, read one repository at a
     /// time. This works for an organization too, and never calls an `/orgs` endpoint.
     /// A repository that can't be read fails the whole refresh, so a partial list
-    /// never looks complete. The error names each repository that failed.
+    /// never looks complete. The error names each repository that failed. A
+    /// repository listed twice (names are case-insensitive) is read once.
     pub async fn listed_repo_runners(&self, owner: &str, repos: &[String]) -> Result<Vec<GhRunner>, GithubError> {
+        let repos = unique_repos(repos);
         let results: Vec<(String, Result<Vec<GhRunner>, GithubError>)> = stream::iter(repos.iter().cloned())
             .map(|repo| async move {
                 let result = self.repo_runners(owner, &repo).await;
@@ -413,11 +423,7 @@ impl GithubClient {
         for (repo, result) in results {
             match result {
                 Ok(batch) => {
-                    for runner in batch {
-                        if !runners.iter().any(|r| r.id == runner.id) {
-                            runners.push(runner);
-                        }
-                    }
+                    runners.extend(batch);
                 }
                 Err(e @ (GithubError::NotFound(_) | GithubError::Forbidden(_))) => failed.push((repo, e)),
                 Err(e) => return Err(e),
@@ -437,7 +443,7 @@ impl GithubClient {
                 reasons.join("; ")
             )));
         }
-        runners.sort_by_key(|r| r.id);
+        runners.sort_by(|a, b| (a.id, &a.repository).cmp(&(b.id, &b.repository)));
         Ok(runners)
     }
 
@@ -491,7 +497,7 @@ impl GithubClient {
         let mut truncated = false;
         let repos = match scope {
             RepoScope::None => return Ok(JobScan::default()),
-            RepoScope::Selected { repos } => repos.clone(),
+            RepoScope::Selected { repos } => unique_repos(repos),
             RepoScope::Recent { max_repos } => self.account_repos(org, kind, *max_repos as usize).await?,
         };
 
@@ -556,6 +562,17 @@ fn hint_runner_permission(e: GithubError, org: &str) -> GithubError {
     }
 }
 
+/// `repos` with repeats removed. GitHub repository names are case-insensitive,
+/// and a saved scope can list one twice, which would read it twice.
+fn unique_repos(repos: &[String]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    repos
+        .iter()
+        .filter(|repo| seen.insert(repo.to_lowercase()))
+        .cloned()
+        .collect()
+}
+
 fn hint_repo_runner_permission(e: GithubError, owner: &str) -> GithubError {
     match e {
         GithubError::Forbidden(msg) | GithubError::NotFound(msg) => GithubError::Forbidden(format!(
@@ -601,6 +618,7 @@ impl RawRunner {
             ephemeral: self.ephemeral,
             version: self.version,
             runner_group_id: self.runner_group_id,
+            repository: None,
         }
     }
 }
@@ -799,8 +817,8 @@ mod tests {
                 "/repos/{owner}/{repo}/actions/runners",
                 get(|Path((_owner, repo)): Path<(String, String)>| async move {
                     match repo.as_str() {
-                        "app" => (AxStatus::OK, Json(json!({"total_count": 2, "runners": [runner(1, "a", false), runner(2, "shared", true)]}))),
-                        "site" => (AxStatus::OK, Json(json!({"total_count": 1, "runners": [runner(2, "shared", true)]}))),
+                        "app" => (AxStatus::OK, Json(json!({"total_count": 2, "runners": [runner(1, "a", false), runner(2, "app-02", true)]}))),
+                        "site" => (AxStatus::OK, Json(json!({"total_count": 1, "runners": [runner(2, "site-2", true)]}))),
                         _ => (AxStatus::NOT_FOUND, Json(json!({"message": "Not Found"}))),
                     }
                 }),
@@ -817,7 +835,17 @@ mod tests {
             .runners("solo", AccountKind::User, &RepoScope::Recent { max_repos: 10 })
             .await
             .unwrap();
-        assert_eq!(runners.iter().map(|r| r.id).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(
+            runners
+                .iter()
+                .map(|r| (r.id, r.name.as_str(), r.repository.as_deref()))
+                .collect::<Vec<_>>(),
+            vec![
+                (1, "a", Some("solo/app")),
+                (2, "app-02", Some("solo/app")),
+                (2, "site-2", Some("solo/site")),
+            ]
+        );
         let scan = client
             .scan_account_jobs("solo", AccountKind::User, &RepoScope::Recent { max_repos: 10 })
             .await
@@ -843,6 +871,53 @@ mod tests {
             panic!("{err:?}")
         };
         assert!(msg.contains("Administration: read"));
+    }
+
+    #[tokio::test]
+    async fn a_repository_listed_twice_is_read_once() {
+        let router = Router::new()
+            .route(
+                "/repos/{owner}/{repo}/actions/runners",
+                get(|Path((_owner, repo)): Path<(String, String)>| async move {
+                    Json(json!({"total_count": 1, "runners": [runner(7, &format!("{repo}-7"), false)]}))
+                }),
+            )
+            .route(
+                "/repos/{owner}/{repo}/actions/runs",
+                get(|Query(q): Query<HashMap<String, String>>| async move {
+                    let runs = if q["status"] == "in_progress" {
+                        json!([{"id": 1}])
+                    } else {
+                        json!([])
+                    };
+                    Json(json!({"total_count": 0, "workflow_runs": runs}))
+                }),
+            )
+            .route(
+                "/repos/{owner}/{repo}/actions/runs/{run}/jobs",
+                get(|| async {
+                    Json(
+                        json!({"total_count": 1, "jobs": [{"id": 1, "run_id": 1, "name": "build",
+                        "status": "in_progress", "labels": ["self-hosted"], "runner_id": 7}]}),
+                    )
+                }),
+            );
+        let base = serve(router).await;
+        let client = GithubClient::new(&base, "t");
+        let scope = RepoScope::Selected {
+            repos: vec!["app".into(), "App".into(), "site".into()],
+        };
+        let runners = client.user_runners("solo", &scope).await.unwrap();
+        assert_eq!(
+            runners.iter().map(|r| r.repository.as_deref()).collect::<Vec<_>>(),
+            vec![Some("solo/app"), Some("solo/site")]
+        );
+        let scan = client
+            .scan_account_jobs("solo", AccountKind::User, &scope)
+            .await
+            .unwrap();
+        assert_eq!(scan.repos_scanned, vec!["app", "site"]);
+        assert_eq!(scan.jobs.len(), 2, "one in-progress job per repository, read once");
     }
 
     #[tokio::test]

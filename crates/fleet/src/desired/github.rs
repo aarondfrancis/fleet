@@ -162,6 +162,7 @@ fn runner_records(
             labels: label_names(&item, |_| true),
             in_desired_group: group_members.map(|m| m.contains(&id)),
             custom_labels: label_names(&item, |l| l.get("type").and_then(Value::as_str) == Some("custom")),
+            repository: None,
         };
         runners.insert(name, runner);
     }
@@ -251,7 +252,11 @@ impl FleetGithub for GithubClient {
             &format!("repos/{repository}/actions/runners?per_page=100"),
             ".runners[] | @base64",
         )?;
-        runner_records(rows, None)
+        let mut runners = runner_records(rows, None)?;
+        for runner in runners.values_mut() {
+            runner.repository = Some(repository.to_string());
+        }
+        Ok(runners)
     }
 
     fn validate_runner_group_policy(&self, name: &str) -> Result<i64> {

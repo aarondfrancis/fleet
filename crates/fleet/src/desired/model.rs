@@ -431,6 +431,8 @@ pub struct GithubRunner {
     /// `None` when the desired runner group could not be found.
     pub in_desired_group: Option<bool>,
     pub custom_labels: BTreeSet<String>,
+    /// `owner/repo` when read from a repository's runner list.
+    pub repository: Option<String>,
 }
 
 impl GithubRunner {
@@ -443,6 +445,7 @@ impl GithubRunner {
             labels: labels.iter().map(ToString::to_string).collect(),
             in_desired_group,
             custom_labels: BTreeSet::new(),
+            repository: None,
         }
     }
 }
