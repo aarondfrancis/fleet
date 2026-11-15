@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use super::github::{FleetGithub, GithubError, ReleaseAsset};
-use super::model::{CheckStatus, DoctorCheck, GithubRunner, Host, LocalRunner, Runner, RunnerRole};
+use super::model::{CheckStatus, DoctorCheck, GithubRunner, Host, LocalRunner, NetworkState, Runner, RunnerRole};
 use super::process::{CommandError, CommandResult, CommandRunner, NonZeroExit};
 use super::remote::{FleetRemote, InstallRequest, RemoteError, Transient};
 use crate::sync::MutexExt;
@@ -35,6 +35,8 @@ pub struct World {
     pub reads: Vec<String>,
     /// A probe of one of these hosts fails with its message.
     pub host_errors: BTreeMap<String, String>,
+    /// Each Windows host's network settings; configuring one makes it match its inventory.
+    pub network: BTreeMap<String, NetworkState>,
     /// Replaces the default log text.
     pub log_output: Option<String>,
     /// The trusted runner group's id.
@@ -52,6 +54,7 @@ impl Default for World {
             tokens: Vec::new(),
             reads: Vec::new(),
             host_errors: BTreeMap::new(),
+            network: BTreeMap::new(),
             log_output: None,
             group_id: 5,
             survives_removal: false,
@@ -239,6 +242,27 @@ impl FleetRemote for FakeFleet {
     fn doctor(&self, host: &Host) -> Vec<DoctorCheck> {
         self.world().reads.push(format!("doctor {}", host.id));
         vec![DoctorCheck::new(&host.id, "ssh", CheckStatus::Pass, "connected")]
+    }
+    fn network(&self, host: &Host) -> Result<NetworkState, RemoteError> {
+        let mut world = self.world();
+        world.reads.push(format!("network {}", host.id));
+        Ok(world.network.get(&host.id).cloned().unwrap_or_default())
+    }
+    fn configure_network(&self, host: &Host) -> Result<String, RemoteError> {
+        let mut world = self.world();
+        world.calls.push(format!("network {}", host.id));
+        let state = world.network.entry(host.id.clone()).or_default();
+        let (ipv6, ipv4): (Vec<String>, Vec<String>) = host.dns.iter().cloned().partition(|s| s.contains(':'));
+        for adapter in state.dns.values_mut() {
+            adapter.ipv4.clone_from(&ipv4);
+            if !ipv6.is_empty() {
+                adapter.ipv6.clone_from(&ipv6);
+            }
+        }
+        state.watchdog = host
+            .network_watchdog
+            .then(|| super::remote::watchdog_version().to_string());
+        Ok("configured".into())
     }
 }
 

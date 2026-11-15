@@ -86,6 +86,8 @@ group every runner registers into. Each `[[hosts]]` entry is one machine:
 | `service_account` | Windows only, and required for `windows-logon`. |
 | `labels` | Labels on every runner of the host: `fleet`, one platform capability label (`macos-build`, `windows-build`, `linux-build` or `linux-experimental`) and, by convention, `host-<id>`. |
 | `enabled` | `false` leaves the host out of checks and changes. Defaults to `true`. |
+| `dns` | Windows only: up to 4 DNS server addresses that apply sets on every physical adapter, for example `["1.1.1.1", "1.0.0.1"]`. IPv6 servers are compared only when listed. Omit to leave DNS alone. |
+| `network_watchdog` | Windows only: `true` installs a SYSTEM scheduled task that checks the internet every minute and, after five minutes without it, reconnects Wi-Fi to the same network (restarting the adapter on the third try, or on a wired adapter). It logs to `%ProgramData%\runner-fleet\network-watchdog.log`; the runner check `network:watchdog` shows the last event. `false` removes it. |
 | `runners` | At least one runner. |
 
 A runner takes `name`, unique across the inventory, and `directory`, one path component below
@@ -124,8 +126,9 @@ still present, runners pending decommission, and GitHub runners carrying its `ho
   prerequisites, disk, power policy and, for logon-task hosts, auto-logon and the active
   session. Results show on each machine.
 - **Review apply…** (a machine's Changes section) installs or reconciles that host's runners:
-  missing runners, labels, trusted-group membership, stopped services. On a host whose runners
-  replace legacy ones, it applies one runner at a time.
+  missing runners, labels, trusted-group membership, stopped services, and a Windows host's
+  `dns` and `network_watchdog`. On a host whose runners replace legacy ones, it applies one
+  runner at a time; network settings are applied only with the whole host.
 - On a runner's pane: **Restart…** (only when it's idle), **Retire…**, **Decommission…**, and
   **Diagnostic log ▸ Show last 200 lines**, a read-only tail of its newest `_diag/Runner_*.log`.
 - The Windows service-account password (`service_mode = "windows-service"` with

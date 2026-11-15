@@ -11,6 +11,8 @@ const WORKER_INSTALL_PS1: &str = include_str!("../../../scripts/worker-install.p
 const WORKER_RETIRE_SH: &str = include_str!("../../../scripts/worker-retire.sh");
 const WORKER_RETIRE_PS1: &str = include_str!("../../../scripts/worker-retire.ps1");
 const WORKER_NIXOS_SERVICE: &str = include_str!("../../../scripts/worker-nixos-service.py");
+const MACHINE_NETWORK_PS1: &str = include_str!("../../../scripts/machine-network.ps1");
+const NETWORK_WATCHDOG_PS1: &str = include_str!("../../../scripts/network-watchdog.ps1");
 /// `run_as_root`, defined ahead of every POSIX script that changes services.
 const RUN_AS_ROOT_SH: &str = include_str!("../../../scripts/run-as-root.sh");
 
@@ -62,6 +64,44 @@ fn powershell_preamble(values: &[(&str, String)]) -> String {
         .map(|(k, v)| format!("$env:{k} = {}\n", ps_quote(v)))
         .collect()
 }
+
+/// The watchdog's first line, which names its version; the probe reads the
+/// installed copy's first line to tell whether it's current.
+pub fn watchdog_version() -> &'static str {
+    NETWORK_WATCHDOG_PS1.lines().next().unwrap_or_default().trim()
+}
+
+/// Sets a Windows host's DNS servers and installs or removes the watchdog.
+pub(super) fn network_payload(host: &Host) -> String {
+    let source = if host.network_watchdog {
+        NETWORK_WATCHDOG_PS1.to_string()
+    } else {
+        String::new()
+    };
+    let values = [
+        ("RF_DNS", host.dns.join(",")),
+        ("RF_WATCHDOG", host.network_watchdog.to_string()),
+        ("RF_WATCHDOG_SOURCE", source),
+    ];
+    powershell_preamble(&values) + MACHINE_NETWORK_PS1
+}
+
+/// Read-only: each physical IPv4 adapter's DNS servers and the installed
+/// watchdog's version line, as `RFN` rows.
+pub(super) const WINDOWS_NETWORK_PROBE: &str = r#"$ErrorActionPreference = 'Stop'
+foreach ($adapter in @(Get-NetAdapter -Physical)) {
+  if (-not (Get-NetIPInterface -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue)) { continue }
+  $v4 = @((Get-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses) -join ','
+  $v6 = @((Get-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv6 -ErrorAction SilentlyContinue).ServerAddresses) -join ','
+  Write-Output "RFN`tdns`t$($adapter.Name)`t$v4`t$v6"
+}
+$task = Get-ScheduledTask -TaskName 'runner-fleet-network-watchdog' -ErrorAction SilentlyContinue
+$path = Join-Path $env:ProgramData 'runner-fleet\network-watchdog.ps1'
+if ($task -and $task.State -ne 'Disabled' -and (Test-Path -LiteralPath $path)) {
+  Write-Output "RFN`twatchdog`t$((Get-Content -LiteralPath $path -TotalCount 1).Trim())"
+}
+Write-Output "RFN`tend"
+"#;
 
 /// Finds the Actions runner service whose executable lives under `$path`.
 const WIN_FIND_SERVICE: &str = "$needle = $path.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar\n\
@@ -348,6 +388,11 @@ if ($null -eq $lid) {
   Write-Output "RFD`tpower:ac-lid`tpass`tclosing the lid on AC does nothing"
 } else {
   Write-Output "RFD`tpower:ac-lid`twarn`tclosing the lid on AC sleeps or shuts down (action $lid)"
+}
+if (Get-ScheduledTask -TaskName 'runner-fleet-network-watchdog' -ErrorAction SilentlyContinue) {
+  $watchdogLog = Join-Path $env:ProgramData 'runner-fleet\network-watchdog.log'
+  $last = if (Test-Path -LiteralPath $watchdogLog) { Get-Content -LiteralPath $watchdogLog -Tail 1 } else { 'no outage logged' }
+  Write-Output "RFD`tnetwork:watchdog`tpass`tinstalled; last event: $last"
 }
 # On Modern Standby (S0) hosts, turning the display off enters standby even
 # when sleep is never, so networking must stay connected in standby or the

@@ -166,6 +166,13 @@ fn parse_host(raw: &Value, environ: &HashMap<String, String>) -> Result<Host> {
         Some(_) => return err("service_account must be a non-empty string"),
     };
     let enabled = optional_bool(data, "enabled", true, "enabled must be true or false")?;
+    let network_watchdog = optional_bool(
+        data,
+        "network_watchdog",
+        false,
+        "network_watchdog must be true or false",
+    )?;
+    let dns = strings(data, "dns")?;
     let id = required_string(data, "id")?;
     let platform = required_string(data, "platform")?;
     let root = required_string(data, "root")?;
@@ -192,6 +199,8 @@ fn parse_host(raw: &Value, environ: &HashMap<String, String>) -> Result<Host> {
         service_account,
         enabled,
         ssh_transport,
+        dns,
+        network_watchdog,
     })
 }
 
@@ -266,6 +275,22 @@ fn validate_host<'a>(host: &'a Host, declared: &mut Declared<'a>) -> Result<()> 
         && !safe_service_account(account)
     {
         return err(format!("{}: invalid service_account: {}", host.id, repr(account)));
+    }
+    if (!host.dns.is_empty() || host.network_watchdog) && !host.is_windows() {
+        return err(format!(
+            "{}: dns and network_watchdog are supported only on Windows",
+            host.id
+        ));
+    }
+    if host.dns.len() > 4 {
+        return err(format!("{}: dns lists at most 4 servers", host.id));
+    }
+    if let Some(server) = host.dns.iter().find(|s| s.parse::<std::net::IpAddr>().is_err()) {
+        return err(format!(
+            "{}: dns server is not an IP address: {}",
+            host.id,
+            repr(server)
+        ));
     }
     if host.runners.is_empty() {
         return err(format!("{}: define at least one runner", host.id));

@@ -50,7 +50,7 @@ function PlanItemRow({ item: i, action }: { item: FleetPlanItem; action?: React.
       <div className="min-w-0 flex-1">
         <div>
           <span className="font-medium">{actionLabel(i.action)}</span>
-          <span className="text-ink-2"> · {i.runner}</span>
+          {i.runner && <span className="text-ink-2"> · {i.runner}</span>}
           {i.blocked && <span className="text-warn"> · won't change</span>}
         </div>
         <div className="truncate text-[11.5px] text-ink-3 selectable" title={i.reason}>

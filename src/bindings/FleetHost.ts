@@ -12,4 +12,12 @@ sshTarget: string | null,
 /**
  * The `ssh` value exactly as written in the inventory.
  */
-sshSetting: string, root: string, serviceMode: FleetServiceMode, labels: Array<string>, runners: Array<FleetRunner>, serviceAccount: string | null, enabled: boolean, sshTransport: FleetSshTransport, };
+sshSetting: string, root: string, serviceMode: FleetServiceMode, labels: Array<string>, runners: Array<FleetRunner>, serviceAccount: string | null, enabled: boolean, sshTransport: FleetSshTransport, 
+/**
+ * Windows: DNS servers set on every physical adapter. Empty leaves DNS alone.
+ */
+dns: Array<string>, 
+/**
+ * Windows: a SYSTEM task that reconnects the network after five minutes offline.
+ */
+networkWatchdog: boolean, };

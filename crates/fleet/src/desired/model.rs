@@ -194,9 +194,18 @@ pub struct Host {
     pub service_account: Option<String>,
     pub enabled: bool,
     pub ssh_transport: SshTransport,
+    /// Windows: DNS servers set on every physical adapter. Empty leaves DNS alone.
+    pub dns: Vec<String>,
+    /// Windows: a SYSTEM task that reconnects the network after five minutes offline.
+    pub network_watchdog: bool,
 }
 
 impl Host {
+    /// The inventory sets machine network settings that apply reconciles.
+    pub fn manages_network(&self) -> bool {
+        self.is_windows() && (!self.dns.is_empty() || self.network_watchdog)
+    }
+
     pub fn is_windows(&self) -> bool {
         self.platform.is_windows()
     }
@@ -384,10 +393,28 @@ pub fn is_active(state: &str) -> bool {
     state == "active" || state == "running"
 }
 
+/// One adapter's effective DNS servers, by address family.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AdapterDns {
+    pub ipv4: Vec<String>,
+    pub ipv6: Vec<String>,
+}
+
+/// A Windows machine's network settings, as its probe read them.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct NetworkState {
+    /// Each physical IPv4 adapter's DNS servers, by adapter name.
+    pub dns: BTreeMap<String, AdapterDns>,
+    /// The installed watchdog's version line, when its task exists.
+    pub watchdog: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FleetSnapshot {
     pub github: BTreeMap<String, GithubRunner>,
     pub local: BTreeMap<String, LocalRunner>,
+    /// Network settings of hosts that manage them, by host id.
+    pub network: BTreeMap<String, NetworkState>,
     pub github_error: Option<String>,
     pub host_errors: BTreeMap<String, String>,
     pub policy_errors: Vec<String>,
@@ -446,6 +473,7 @@ pub enum FleetPlanAction {
     RepairRegistration,
     RecoverLocal,
     HardenGroup,
+    ConfigureNetwork,
 }
 
 impl FleetPlanAction {
@@ -469,13 +497,16 @@ impl FleetPlanAction {
             Self::RepairRegistration => "repair-registration",
             Self::RecoverLocal => "recover-local",
             Self::HardenGroup => "harden-group",
+            Self::ConfigureNetwork => "configure-network",
         }
     }
 
     /// Whether applying desired state carries out this step.
     pub const fn is_apply(self) -> bool {
         match self {
-            Self::Install | Self::ReconcileLabels | Self::AssignGroup | Self::StartService => true,
+            Self::Install | Self::ReconcileLabels | Self::AssignGroup | Self::StartService | Self::ConfigureNetwork => {
+                true
+            }
             Self::RetireLegacy
             | Self::Decommission
             | Self::NoChange

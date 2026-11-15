@@ -172,6 +172,7 @@ pub fn snapshot() -> FleetSnapshot {
     FleetSnapshot {
         github: github.into_iter().map(|g| (g.name.clone(), g)).collect(),
         local: local.into_iter().map(|l| (l.name.clone(), l)).collect(),
+        network: std::collections::BTreeMap::new(),
         github_error: None,
         host_errors: [(
             "win-builder".to_string(),

@@ -73,6 +73,9 @@ root = "C:\\gh-runners\\acme"
 service_mode = "windows-logon"
 service_account = ".\\builder"
 labels = ["fleet", "windows-build", "host-windows-gui"]
+# Cloudflare DNS on every adapter, and reconnect after five minutes offline.
+dns = ["1.1.1.1", "1.0.0.1"]
+network_watchdog = true
 runners = [{ name = "windows-gui-01", directory = "runner-01", labels = ["windows-e2e-x64"] }]
 
 [[hosts]]

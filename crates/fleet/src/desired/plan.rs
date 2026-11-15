@@ -2,10 +2,11 @@
 //! Pure: it never contacts GitHub or a host.
 
 use super::model::{
-    FleetPlanAction, FleetSnapshot, GithubRunner, Host, Inventory, LocalRunner, LookupError, PlanItem, Runner,
-    is_active, iter_runners,
+    FleetPlanAction, FleetSnapshot, GithubRunner, Host, Inventory, LocalRunner, LookupError, NetworkState, PlanItem,
+    Runner, is_active, iter_runners,
 };
 use super::py::repr;
+use super::remote::watchdog_version;
 use super::state::label_drift;
 
 /// An empty `runner_name` selects every runner, as in the original.
@@ -59,10 +60,54 @@ pub fn generate_plan(
             append_legacy_plan(&mut items, &host.id, runner, snapshot);
         }
     }
+    if runner_name.is_none() {
+        for host in &hosts {
+            if snapshot.host_errors.contains_key(&host.id) {
+                continue;
+            }
+            if let Some(state) = snapshot.network.get(&host.id).filter(|_| host.manages_network()) {
+                let drift = network_drift(host, state);
+                if !drift.is_empty() {
+                    items.push(
+                        PlanItem::new(FleetPlanAction::ConfigureNetwork, &host.id, "", drift.join("; "))
+                            .command(format!("bin/fleet apply {}", host.id)),
+                    );
+                }
+            }
+        }
+    }
     if let (Some(name), false) = (runner_name, matched) {
         return Err(LookupError(format!("desired runner {} is not selected", repr(name))));
     }
     Ok(items)
+}
+
+/// What differs between a host's declared network settings and `state`.
+pub(crate) fn network_drift(host: &Host, state: &NetworkState) -> Vec<String> {
+    let mut drift = Vec::new();
+    if !host.dns.is_empty() {
+        let (ipv6, ipv4): (Vec<String>, Vec<String>) = host.dns.iter().cloned().partition(|s| s.contains(':'));
+        for (adapter, current) in &state.dns {
+            if current.ipv4 != ipv4 || (!ipv6.is_empty() && current.ipv6 != ipv6) {
+                let now: Vec<&str> = current.ipv4.iter().chain(&current.ipv6).map(String::as_str).collect();
+                let now = if now.is_empty() {
+                    "none".to_string()
+                } else {
+                    now.join(", ")
+                };
+                drift.push(format!("set DNS on {adapter} to {} (now {now})", host.dns.join(", ")));
+            }
+        }
+    }
+    match (state.watchdog.as_deref(), host.network_watchdog) {
+        (None, true) => drift.push("install the network watchdog".into()),
+        (Some(installed), true) if installed != watchdog_version() => {
+            drift.push(format!("update the network watchdog ({installed})"));
+        }
+        (Some(_), false) => drift.push("remove the network watchdog".into()),
+        _ => {}
+    }
+    drift
 }
 
 /// Steps that bring one desired runner, which GitHub and its host both

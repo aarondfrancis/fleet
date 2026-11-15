@@ -15,6 +15,7 @@ use super::model::{
     CheckStatus, DoctorCheck, GithubRunner, Host, Inventory, LegacyRunner, LocalRunner, LookupError, Runner,
     RunnerRole, is_active,
 };
+use super::plan::network_drift;
 use super::py::repr;
 use super::remote::{FleetRemote, InstallRequest, RemoteError, Transient};
 use super::state::label_drift;
@@ -150,6 +151,9 @@ impl Ops<'_> {
         }
 
         let mut messages = Vec::new();
+        if runner_name.is_none() && host.manages_network() {
+            self.reconcile_network(host, &mut messages)?;
+        }
         let mut asset: Option<ReleaseAsset> = None;
         for runner in selected {
             let message_count = messages.len();
@@ -177,6 +181,31 @@ impl Ops<'_> {
             }
         }
         Ok(messages)
+    }
+
+    /// Sets the inventory's DNS servers and watchdog when the host's differ.
+    fn reconcile_network(&self, host: &Host, messages: &mut Vec<String>) -> Result<()> {
+        let state = self.remote.network(host)?;
+        let drift = network_drift(host, &state);
+        if drift.is_empty() {
+            return Ok(());
+        }
+        let output = self
+            .remote
+            .configure_network(host)
+            .map_err(|e| OperationError(format!("network configuration failed on {}: {e}", host.id)))?;
+        let after = network_drift(host, &self.remote.network(host)?);
+        if !after.is_empty() {
+            return fail(format!(
+                "network settings on {} still differ after configuring: {}",
+                host.id,
+                after.join("; ")
+            ));
+        }
+        let detail: Vec<&str> = output.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+        messages.push(format!("configured network on {}: {}", host.id, drift.join("; ")));
+        messages.extend(detail.into_iter().map(String::from));
+        Ok(())
     }
 
     /// The trusted group's id, GitHub's runners and the host's runner directories.

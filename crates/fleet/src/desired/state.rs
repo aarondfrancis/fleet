@@ -31,6 +31,19 @@ pub fn collect_snapshot(
             Ok(local) => snapshot.local.extend(local),
             Err(e) => {
                 snapshot.host_errors.insert(host.id.clone(), e.0);
+                continue;
+            }
+        }
+        if host.manages_network() {
+            match remote.network(host) {
+                Ok(state) => {
+                    snapshot.network.insert(host.id.clone(), state);
+                }
+                Err(e) => {
+                    snapshot
+                        .host_errors
+                        .insert(host.id.clone(), format!("network settings unreadable: {}", e.0));
+                }
             }
         }
     }

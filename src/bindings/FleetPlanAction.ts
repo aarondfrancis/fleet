@@ -3,4 +3,4 @@
 /**
  * A desired-state plan step, preserving Runner Fleet's serialized action names.
  */
-export type FleetPlanAction = "install" | "reconcile-labels" | "assign-group" | "start-service" | "retire-legacy" | "decommission" | "no-change" | "restart" | "inspect" | "inspect-offline" | "inspect-group" | "preserve-legacy" | "preserve-service" | "preserve-decommission" | "repair-registration" | "recover-local" | "harden-group";
+export type FleetPlanAction = "install" | "reconcile-labels" | "assign-group" | "start-service" | "retire-legacy" | "decommission" | "no-change" | "restart" | "inspect" | "inspect-offline" | "inspect-group" | "preserve-legacy" | "preserve-service" | "preserve-decommission" | "repair-registration" | "recover-local" | "harden-group" | "configure-network";

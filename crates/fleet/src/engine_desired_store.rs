@@ -130,6 +130,8 @@ impl DesiredStore {
                     .unwrap_or_default();
                 current.value.local.retain(|k, _| !names.contains(&k.as_str()));
                 current.value.local.extend(fresh.local);
+                current.value.network.remove(host_id);
+                current.value.network.extend(fresh.network);
                 current.value.host_errors.remove(host_id);
                 current.value.host_errors.extend(fresh.host_errors);
                 current.value.github = fresh.github;

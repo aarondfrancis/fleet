@@ -17,13 +17,17 @@ use base64::Engine as _;
 use serde_json::Value;
 
 use super::github::ReleaseAsset;
-use super::model::{CheckStatus, DoctorCheck, Host, LocalRunner, Runner, RunnerRole, SshTransport};
+use super::model::{
+    AdapterDns, CheckStatus, DoctorCheck, Host, LocalRunner, NetworkState, Runner, RunnerRole, SshTransport,
+};
 use super::process::{CommandRunner, NonZeroExit};
 use super::py::{py_str, repr, splitlines, truthy};
 use super::windows_logon::ServiceAction;
-pub use scripts::probe_script;
-use scripts::{INSTALL, RETIRE, WorkerScript, logs_script, service_script, worker_payload};
+use scripts::{
+    INSTALL, RETIRE, WINDOWS_NETWORK_PROBE, WorkerScript, logs_script, network_payload, service_script, worker_payload,
+};
 pub(crate) use scripts::{posix_doctor, windows_doctor};
+pub use scripts::{probe_script, watchdog_version};
 
 /// The OpenSSH client every connection and `ssh -G` lookup uses. GUI apps get
 /// a minimal PATH, and the configuration a review binds must come from the
@@ -119,6 +123,10 @@ pub trait FleetRemote: Send + Sync {
     fn restart(&self, host: &Host, runner: &Runner, role: RunnerRole, sudo_password: &Transient) -> Result<String>;
     fn logs(&self, host: &Host, runner: &Runner, role: RunnerRole, lines: u32) -> Result<String>;
     fn doctor(&self, host: &Host) -> Vec<DoctorCheck>;
+    /// Read-only: a Windows host's DNS servers and network watchdog.
+    fn network(&self, host: &Host) -> Result<NetworkState>;
+    /// Sets the inventory's DNS servers and installs, updates or removes the watchdog.
+    fn configure_network(&self, host: &Host) -> Result<String>;
 }
 
 #[derive(Debug, Clone)]
@@ -388,6 +396,57 @@ impl FleetRemote for RemoteClient {
             Err(e) => vec![DoctorCheck::new(&host.id, "ssh", CheckStatus::Fail, e.0)],
         }
     }
+
+    fn network(&self, host: &Host) -> Result<NetworkState> {
+        if !host.is_windows() {
+            return Err(RemoteError(format!("{} is not a Windows host", host.id)));
+        }
+        let output = self.run_script(host, WINDOWS_NETWORK_PROBE, Some(Duration::from_secs(30)))?;
+        parse_network_probe(&output)
+    }
+
+    fn configure_network(&self, host: &Host) -> Result<String> {
+        if !host.manages_network() {
+            return Err(RemoteError(format!("{} declares no network settings", host.id)));
+        }
+        self.run_script(host, &network_payload(host), Some(Duration::from_secs(120)))
+    }
+}
+
+/// `RFN` rows from the Windows network probe, which ends with `RFN\tend`.
+pub fn parse_network_probe(output: &str) -> Result<NetworkState> {
+    let mut state = NetworkState::default();
+    let mut complete = false;
+    let list = |value: &str| -> Vec<String> {
+        value
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect()
+    };
+    for raw in splitlines(output) {
+        let fields: Vec<&str> = raw.split('\t').collect();
+        match fields[..] {
+            ["RFN", "dns", adapter, ipv4, ipv6] => {
+                state.dns.insert(
+                    adapter.to_string(),
+                    AdapterDns {
+                        ipv4: list(ipv4),
+                        ipv6: list(ipv6),
+                    },
+                );
+            }
+            ["RFN", "watchdog", version] => state.watchdog = Some(version.trim().to_string()),
+            ["RFN", "end"] => complete = true,
+            ["RFN", ..] => return Err(RemoteError(format!("malformed network probe row: {}", repr(raw)))),
+            _ => {}
+        }
+    }
+    if !complete {
+        return Err(RemoteError("host returned no recognizable network probe data".into()));
+    }
+    Ok(state)
 }
 
 pub fn parse_posix_probe(output: &str) -> Result<BTreeMap<String, LocalRunner>> {

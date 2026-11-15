@@ -26,6 +26,7 @@ const ACTION_LABELS: Record<FleetPlanAction, string> = {
   "repair-registration": "Needs manual repair",
   "recover-local": "Needs manual recovery",
   "harden-group": "Runner group unsafe",
+  "configure-network": "Configure network",
 };
 
 export function actionLabel(action: FleetPlanAction): string {
