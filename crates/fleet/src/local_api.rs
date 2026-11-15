@@ -12,6 +12,7 @@ use axum::middleware;
 use axum::routing::get;
 
 use crate::engine::Engine;
+use crate::model::FleetView;
 
 mod checks;
 mod common;
@@ -27,6 +28,19 @@ pub const DEFAULT_PORT: u16 = 47622;
 const DEFAULT_PAGE_SIZE: usize = 100;
 pub(crate) const MAX_PAGE_SIZE: usize = 200;
 const CONCURRENT_LOGS: usize = 2;
+
+/// Content fingerprint of a fleet view, ignoring `generatedAt`, so equal content gets an equal revision.
+///
+/// # Errors
+///
+/// When the view can't be serialized.
+pub fn revision(view: &FleetView) -> Result<String, serde_json::Error> {
+    let mut content = serde_json::to_value(view)?;
+    if let Some(object) = content.as_object_mut() {
+        object.remove("generatedAt");
+    }
+    Ok(common::fingerprint(&content))
+}
 
 /// Construct the API with a shared, bounded registry for asynchronous checks.
 pub fn router(engine: Arc<Engine>) -> Router {

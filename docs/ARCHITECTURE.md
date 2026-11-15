@@ -46,7 +46,8 @@ Machines use `ts:<node id>` as their UI identity, or `inv:<host id>` without a t
 Inventory SSH aliases resolve through `ssh -G`. Other desktop and server machines appear under
 Other machines; ignored machines and phones don't get automatic SSH reads.
 
-The UI receives fleet-updated events after polls and every five seconds so ages advance.
+The UI receives fleet-updated events after polls and changes. A five-second tick re-derives the
+view and pushes it only when its content changed, such as a staleness flag flipping.
 
 ## Event history and alerts
 

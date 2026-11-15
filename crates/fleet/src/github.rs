@@ -6,12 +6,14 @@
 //!   `GET /repos/{o}/{r}/actions/runs?status=queued|in_progress` per repo in scope,
 //!   then `GET .../runs/{id}/jobs` (repo "Actions: read").
 //! - Every GET is conditional (ETag); a 304 doesn't count against the rate limit.
+//! - After a primary or secondary rate limit, requests fail fast until the reset or retry time.
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use futures::stream::{self, StreamExt};
 use reqwest::StatusCode;
 use reqwest::header::{ACCEPT, ETAG, HeaderMap, IF_NONE_MATCH, LINK, USER_AGENT};
@@ -32,6 +34,10 @@ const MAX_RUNNER_PAGES: usize = 20;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 /// Conditional responses kept per client. Job pages are keyed by run, so old runs must age out.
 const MAX_CACHED_PAGES: usize = 512;
+/// Rate-limit pauses last at least a minute (GitHub's advice without `retry-after`, and a guard
+/// against a clock ahead of GitHub's) and at most an hour (a guard against garbled headers).
+const MIN_PAUSE: TimeDelta = TimeDelta::minutes(1);
+const MAX_PAUSE: TimeDelta = TimeDelta::hours(1);
 
 #[derive(Debug, Clone)]
 struct ApiPage {
@@ -103,9 +109,13 @@ pub enum GithubError {
 pub struct GithubClient {
     http: reqwest::Client,
     api_base: String,
-    token: String,
+    token: Mutex<String>,
+    /// Token re-reads requested, and the latest request a stored token satisfies.
+    token_requested: AtomicU64,
+    token_read: AtomicU64,
     cache: Mutex<EtagCache>,
     rate: Mutex<Option<RateLimit>>,
+    paused_until: Mutex<Option<DateTime<Utc>>>,
 }
 
 /// The token is never shown.
@@ -125,10 +135,46 @@ impl GithubClient {
                 .build()
                 .expect("http client"),
             api_base: api_base.trim_end_matches('/').to_string(),
-            token: token.to_string(),
+            token: Mutex::new(token.to_string()),
+            token_requested: AtomicU64::new(0),
+            token_read: AtomicU64::new(0),
             cache: Mutex::new(EtagCache::default()),
             rate: Mutex::new(None),
+            paused_until: Mutex::new(None),
         }
+    }
+
+    /// Ask the owner to read the token again before the next poll; the ETag cache is kept.
+    pub fn expire_token(&self) {
+        self.token_requested.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// The pending token re-read request, to pass to [`Self::set_token`] once the token is read.
+    pub fn token_request(&self) -> Option<u64> {
+        let requested = self.token_requested.load(Ordering::SeqCst);
+        (requested > self.token_read.load(Ordering::SeqCst)).then_some(requested)
+    }
+
+    /// Swap in a token read for `request`, keeping the ETag cache and any rate-limit pause.
+    /// A request made while it was being read stays pending.
+    pub fn set_token(&self, token: &str, request: u64) {
+        *self.token.locked() = token.to_string();
+        self.token_read.fetch_max(request, Ordering::SeqCst);
+    }
+
+    /// Extend the pause to `until`, or the shortest pause, within [`MIN_PAUSE`]..[`MAX_PAUSE`]
+    /// from now. It only ever grows and ends by time.
+    fn pause(&self, until: Option<DateTime<Utc>>) {
+        let now = Utc::now();
+        let until = until.unwrap_or(now).clamp(now + MIN_PAUSE, now + MAX_PAUSE);
+        let mut paused = self.paused_until.locked();
+        *paused = Some(paused.map_or(until, |p| p.max(until)));
+    }
+
+    /// The error to return while a pause lasts.
+    fn paused(&self) -> Option<GithubError> {
+        let until = self.paused_until.locked().filter(|until| *until > Utc::now())?;
+        Some(GithubError::RateLimited(until.format("%H:%M UTC").to_string()))
     }
 
     pub fn rate_limit(&self) -> Option<RateLimit> {
@@ -136,7 +182,11 @@ impl GithubClient {
     }
 
     async fn get(&self, path_and_query: &str) -> Result<ApiPage, GithubError> {
+        if let Some(error) = self.paused() {
+            return Err(error);
+        }
         let url = format!("{}{}", self.api_base, path_and_query);
+        let token = self.token.locked().clone();
         let cached = self.cache.locked().get(&url);
         let mut req = self
             .http
@@ -144,7 +194,7 @@ impl GithubClient {
             .header(ACCEPT, "application/vnd.github+json")
             .header("X-GitHub-Api-Version", API_VERSION)
             .header(USER_AGENT, "runner-dashboard")
-            .bearer_auth(&self.token);
+            .bearer_auth(token);
         if let Some((etag, _)) = &cached {
             req = req.header(IF_NONE_MATCH, etag);
         }
@@ -161,24 +211,31 @@ impl GithubClient {
             return Ok(body);
         }
         if !status.is_success() {
-            let remaining_zero = resp
-                .headers()
-                .get("x-ratelimit-remaining")
-                .and_then(|v| v.to_str().ok())
-                == Some("0");
+            let retry_after = header_number(resp.headers(), "retry-after");
             let body = resp.text().await.unwrap_or_default();
             let msg = serde_json::from_str::<Value>(&body)
                 .ok()
                 .and_then(|v| v["message"].as_str().map(str::to_string))
                 .unwrap_or(body);
+            // A primary limit exhausts the quota (record_rate paused already); secondary ones
+            // send retry-after or only say so.
+            let text = msg.to_lowercase();
+            let limited = status == StatusCode::TOO_MANY_REQUESTS
+                || (status == StatusCode::FORBIDDEN
+                    && (retry_after.is_some()
+                        || self.rate_limit().is_some_and(|r| r.remaining == 0)
+                        || text.contains("rate limit")
+                        || text.contains("abuse detection")));
+            if limited {
+                self.pause(
+                    retry_after.map(|secs| Utc::now() + TimeDelta::seconds(secs.clamp(0, MAX_PAUSE.num_seconds()))),
+                );
+                if let Some(error) = self.paused() {
+                    return Err(error);
+                }
+            }
             return Err(match status.as_u16() {
                 401 => GithubError::Unauthorized,
-                403 | 429 if remaining_zero => GithubError::RateLimited(
-                    self.rate_limit()
-                        .and_then(|r| r.resets_at)
-                        .map(|t| t.format("%H:%M UTC").to_string())
-                        .unwrap_or_else(|| "soon".into()),
-                ),
                 403 => GithubError::Forbidden(msg),
                 404 => GithubError::NotFound(msg),
                 code => GithubError::Http(code, msg),
@@ -209,19 +266,18 @@ impl GithubClient {
         Ok(body)
     }
 
+    /// Keep the latest primary rate limit; an exhausted one pauses requests until it resets.
     fn record_rate(&self, headers: &HeaderMap) {
-        let num = |name: &str| {
-            headers
-                .get(name)
-                .and_then(|v| v.to_str().ok())
-                .and_then(|v| v.parse::<i64>().ok())
-        };
-        let count = |name: &str| num(name).and_then(|v| u32::try_from(v).ok());
+        let count = |name: &str| header_number(headers, name).and_then(|v| u32::try_from(v).ok());
         if let (Some(limit), Some(remaining)) = (count("x-ratelimit-limit"), count("x-ratelimit-remaining")) {
+            let resets_at = header_number(headers, "x-ratelimit-reset").and_then(|t| DateTime::from_timestamp(t, 0));
+            if remaining == 0 {
+                self.pause(resets_at);
+            }
             *self.rate.locked() = Some(RateLimit {
                 limit,
                 remaining,
-                resets_at: num("x-ratelimit-reset").and_then(|t| DateTime::from_timestamp(t, 0)),
+                resets_at,
             });
         }
     }
@@ -411,6 +467,10 @@ fn hint_runner_permission(e: GithubError, org: &str) -> GithubError {
     }
 }
 
+fn header_number(headers: &HeaderMap, name: &str) -> Option<i64> {
+    headers.get(name)?.to_str().ok()?.trim().parse().ok()
+}
+
 fn decode<T: for<'de> Deserialize<'de>>(v: Value) -> Result<T, GithubError> {
     serde_json::from_value(v).map_err(|e| GithubError::Decode(e.to_string()))
 }
@@ -496,6 +556,8 @@ mod tests {
     use axum::routing::get;
     use axum::{Json, Router};
     use serde_json::json;
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
 
     use crate::test_server::serve;
 
@@ -573,6 +635,110 @@ mod tests {
             panic!("{err:?}")
         };
         assert!(msg.contains("Self-hosted runners: read"));
+    }
+
+    /// A runner listing that always answers `status` with `headers`, counting requests.
+    async fn answering(
+        status: AxStatus,
+        headers: Vec<(&'static str, String)>,
+        message: &'static str,
+    ) -> (GithubClient, Arc<AtomicUsize>) {
+        let hits = Arc::new(AtomicUsize::new(0));
+        let counter = hits.clone();
+        let router = Router::new().route(
+            "/orgs/{org}/actions/runners",
+            get(move || {
+                counter.fetch_add(1, Ordering::SeqCst);
+                let mut h = AxHeaders::new();
+                for (name, value) in &headers {
+                    h.insert(*name, value.parse().unwrap());
+                }
+                async move {
+                    (
+                        status,
+                        h,
+                        Json(json!({"message": message, "total_count": 0, "runners": []})),
+                    )
+                }
+            }),
+        );
+        (GithubClient::new(&serve(router).await, "t"), hits)
+    }
+
+    fn exhausted(reset: DateTime<Utc>) -> Vec<(&'static str, String)> {
+        vec![
+            ("x-ratelimit-limit", "5000".into()),
+            ("x-ratelimit-remaining", "0".into()),
+            ("x-ratelimit-reset", reset.timestamp().to_string()),
+        ]
+    }
+
+    /// Asserts the client is paused for `min..=max` from now and sends nothing meanwhile.
+    async fn assert_paused(client: &GithubClient, hits: &AtomicUsize, min: TimeDelta, max: TimeDelta) {
+        let sent = hits.load(Ordering::SeqCst);
+        let err = client.org_runners("acme").await.unwrap_err();
+        assert!(matches!(err, GithubError::RateLimited(_)), "{err:?}");
+        assert_eq!(hits.load(Ordering::SeqCst), sent, "no requests while paused");
+        let until = client.paused_until.locked().unwrap() - Utc::now();
+        assert!(until > min - TimeDelta::seconds(5) && until <= max, "{until}");
+    }
+
+    #[tokio::test]
+    async fn exhausted_primary_limit_pauses_until_reset() {
+        let reset = Utc::now() + TimeDelta::minutes(10);
+        let (client, hits) = answering(AxStatus::OK, exhausted(reset), "").await;
+        assert!(
+            client.org_runners("acme").await.is_ok(),
+            "the last request still succeeds"
+        );
+        assert_paused(&client, &hits, TimeDelta::minutes(10), TimeDelta::minutes(10)).await;
+        client.pause(None);
+        assert_paused(&client, &hits, TimeDelta::minutes(10), TimeDelta::minutes(10)).await;
+    }
+
+    #[tokio::test]
+    async fn forbidden_with_no_quota_left_is_a_rate_limit_even_after_the_local_reset() {
+        let (client, hits) = answering(AxStatus::FORBIDDEN, exhausted(Utc::now() + MAX_PAUSE), "Forbidden").await;
+        assert!(matches!(
+            client.org_runners("acme").await,
+            Err(GithubError::RateLimited(_))
+        ));
+        assert_paused(&client, &hits, MAX_PAUSE, MAX_PAUSE).await;
+        // This Mac's clock is ahead of GitHub's: the reset has passed here but not there.
+        let past = Utc::now() - TimeDelta::minutes(10);
+        let (client, hits) = answering(AxStatus::FORBIDDEN, exhausted(past), "Forbidden").await;
+        assert!(matches!(
+            client.org_runners("acme").await,
+            Err(GithubError::RateLimited(_))
+        ));
+        assert_paused(&client, &hits, MIN_PAUSE, MIN_PAUSE).await;
+    }
+
+    #[tokio::test]
+    async fn secondary_limits_pause_within_bounds() {
+        let retry = |secs: &str| vec![("retry-after", secs.to_string())];
+        let cases = [
+            (
+                AxStatus::FORBIDDEN,
+                retry("120"),
+                "You have exceeded a secondary rate limit.",
+                TimeDelta::minutes(2),
+            ),
+            (
+                AxStatus::FORBIDDEN,
+                vec![],
+                "You have triggered an abuse detection mechanism.",
+                MIN_PAUSE,
+            ),
+            (AxStatus::TOO_MANY_REQUESTS, vec![], "", MIN_PAUSE),
+            (AxStatus::TOO_MANY_REQUESTS, retry(&i64::MAX.to_string()), "", MAX_PAUSE),
+        ];
+        for (status, headers, message, pause) in cases {
+            let (client, hits) = answering(status, headers, message).await;
+            let err = client.org_runners("acme").await.unwrap_err();
+            assert!(matches!(err, GithubError::RateLimited(_)), "{message}: {err:?}");
+            assert_paused(&client, &hits, pause, pause).await;
+        }
     }
 
     #[tokio::test]

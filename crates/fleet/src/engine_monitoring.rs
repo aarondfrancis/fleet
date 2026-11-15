@@ -2,19 +2,27 @@
 
 use super::{Engine, EngineError};
 use crate::local_api::MAX_PAGE_SIZE;
+use crate::model::{DataSource, FleetView};
 use crate::monitoring::FleetMachineEvent;
 use crate::sync::MutexExt;
 use chrono::{DateTime, Duration, Utc};
 
 impl Engine {
-    /// Record transitions and return durable notification requests due for delivery or retry.
+    /// Record transitions and return durable notification requests due for delivery or retry,
+    /// with the fleet view they were evaluated on, including the alerts this round changed.
     /// Performs local disk I/O; call off the async runtime.
-    pub fn record_monitoring(&self, now: DateTime<Utc>) -> Vec<FleetMachineEvent> {
+    pub fn record_monitoring(&self, now: DateTime<Utc>) -> (Vec<FleetMachineEvent>, FleetView) {
         let mut view = self.view();
         let mut monitoring = self.monitoring.locked();
         // Read the preference under the same lock as preference changes and outbox updates.
         view.monitoring.desktop_notifications = self.config().desktop_notifications;
-        monitoring.record(&view, now)
+        let events = monitoring.record(&view, now);
+        if view.source == DataSource::Live {
+            let (at, notifications) = (view.generated_at, view.monitoring.desktop_notifications);
+            monitoring.attach(&mut view, at, notifications);
+            crate::issues::attach(&mut view);
+        }
+        (events, view)
     }
 
     /// Persist native API request acceptance; this does not confirm OS display.
@@ -138,7 +146,7 @@ mod tests {
         let view = engine.view();
         assert!(view.machines.is_empty());
         assert!(view.tailnet.as_of.is_none());
-        assert!(engine.record_monitoring(view.generated_at).is_empty());
+        assert!(engine.record_monitoring(view.generated_at).0.is_empty());
         let after: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
         assert_eq!(after["pending_notifications"], before["pending_notifications"]);
     }
