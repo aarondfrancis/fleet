@@ -25,6 +25,8 @@ export function Icon({ name, size = 14 }: { name: IconName; size?: number }) {
           <rect x="9" y="9" width="5" height="5" rx="1.2" />
         </svg>
       );
+    case "activity":
+      return <svg {...common}><path d="M3 13V9M6.5 13V4M10 13V7M13.5 13V2.5" /></svg>;
     case "queue":
       return (
         <svg {...common}>
@@ -118,6 +120,7 @@ type IconName =
   | "inbox"
   | "grid"
   | "queue"
+  | "activity"
   | "chevron"
   | "refresh"
   | "machine"

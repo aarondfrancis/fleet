@@ -10,7 +10,7 @@ describe("navigation search", () => {
   it("keeps matching runners under their parent and keyboard navigation within the results", () => {
     const filtered = filterNavView(view, "  STUDIO-1 ");
     expect(flattenNav(filtered, new Set(), { other: true, unlinked: true }).map((i) => selectionId(i.selection))).toEqual([
-      "overview", "queue", "machine:ts:nStudio", "runner:gh:acme-demo:101",
+      "overview", "queue", "activity", "machine:ts:nStudio", "runner:gh:acme-demo:101",
     ]);
     expect(view.machines.find((m) => m.id === "ts:nStudio")?.runners).toHaveLength(3);
   });
@@ -27,9 +27,9 @@ describe("navigation search", () => {
 });
 
 describe("flattenNav", () => {
-  it("lists overview, queue, machines with their runners, then ignored", () => {
+  it("lists overview, queue, activity, machines with their runners, then ignored", () => {
     const ids = flattenNav(view, new Set(), closed).map((i) => selectionId(i.selection));
-    expect(ids.slice(0, 4)).toEqual(["overview", "queue", "machine:ts:nLinux", "runner:gh:acme-demo:301"]);
+    expect(ids.slice(0, 5)).toEqual(["overview", "queue", "activity", "machine:ts:nLinux", "runner:gh:acme-demo:301"]);
     // Runners declared in the inventory appear under their machine even without GitHub.
     expect(ids).toContain("runner:inv:mac-mini-03:mini-03-01");
     expect(ids).not.toContain("runner:gh:acme-demo:501"); // unlinked group is closed

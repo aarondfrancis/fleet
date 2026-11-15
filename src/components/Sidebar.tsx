@@ -40,6 +40,7 @@ export function Sidebar({ view, filtered, selection }: { view: FleetView; filter
       <nav className="space-y-0.5 p-2" aria-label="Overview">
         <Row sel={{ kind: "overview" }} selected={isSelected({ kind: "overview" })} icon={<Icon name="grid" size={16} />} label="Fleet overview" trailing={allMachines(view).length} />
         <Row sel={{ kind: "queue" }} selected={isSelected({ kind: "queue" })} icon={<Icon name="queue" size={16} />} label="Queued jobs" trailing={view.queue.jobs.length} />
+        <Row sel={{ kind: "activity" }} selected={isSelected({ kind: "activity" })} icon={<Icon name="activity" size={16} />} label="Activity" />
       </nav>
       <div className="px-2 pb-2">
         <label className="relative block">

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { elapsedSince, formatBytes, formatElapsed, formatUptime, timeAgo } from "./format";
+import { elapsedSince, formatBytes, formatElapsed, formatSeconds, formatUptime, timeAgo } from "./format";
+
+describe("formatSeconds", () => {
+  it("shows seconds, then minutes, then hours and days", () => {
+    expect(formatSeconds(45)).toBe("45s");
+    expect(formatSeconds(725)).toBe("12m 5s");
+    expect(formatSeconds(3 * 3600 + 12 * 60)).toBe("3h 12m");
+    expect(formatSeconds(2 * 86400 + 4 * 3600)).toBe("2d 4h");
+  });
+});
 
 describe("formatElapsed", () => {
   it("uses m:ss under an hour and h:mm:ss above", () => {
