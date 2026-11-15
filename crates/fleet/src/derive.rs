@@ -167,6 +167,7 @@ struct GhEntry {
     runner: GhRunner,
     at: DateTime<Utc>,
     stale: bool,
+    update: Option<crate::runner_version::RunnerUpdate>,
 }
 
 struct GithubIndex {
@@ -184,6 +185,12 @@ impl GithubIndex {
             by_name: HashMap::new(),
             jobs_by_runner: HashMap::new(),
         };
+        let releases = obs
+            .runner_releases
+            .as_ref()
+            .filter(|r| now - r.at <= crate::runner_version::RELEASES_USABLE_FOR)
+            .map(|r| r.value.as_slice())
+            .unwrap_or_default();
         for org_cfg in &config.orgs {
             let org = org_cfg.login.to_lowercase();
             let Some(o) = obs.github.get(&org) else { continue };
@@ -198,6 +205,10 @@ impl GithubIndex {
                         runner: r.clone(),
                         at: runners.at,
                         stale,
+                        update: r
+                            .version
+                            .as_deref()
+                            .and_then(|v| crate::runner_version::update(v, releases, now)),
                     });
                 }
             }
@@ -273,6 +284,7 @@ fn runner_view(
         ephemeral: e.runner.ephemeral,
         as_of: e.at,
         stale: e.stale,
+        update: e.update.clone(),
     });
     let local_facts = local.map(|(l, at, stale)| LocalRunnerFacts {
         install_dir: l.path.clone(),

@@ -283,7 +283,8 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-01",
@@ -352,7 +353,8 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-02",
@@ -676,7 +678,8 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-01",
@@ -1140,7 +1143,8 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-01",
@@ -1223,7 +1227,8 @@
             "version": "2.329.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "update": null
           },
           "local": {
             "installDir": "~/gh-runners/acme-demo/runner-02",
@@ -1290,7 +1295,8 @@
             "version": null,
             "ephemeral": null,
             "asOf": "2026-10-03T11:56:00Z",
-            "stale": true
+            "stale": true,
+            "update": null
           },
           "local": {
             "installDir": "~/actions-runner-2",
@@ -1587,7 +1593,7 @@
             "title": "win-builder",
             "status": "pass",
             "value": "Running",
-            "detail": "Service: running · version: 2.329.0 · C:\\gh-runners\\acme-demo\\runner-01"
+            "detail": "Service: running · version: 2.328.0 · C:\\gh-runners\\acme-demo\\runner-01"
           }
         ]
       },
@@ -1627,10 +1633,15 @@
               "X64"
             ],
             "os": "Windows",
-            "version": "2.329.0",
+            "version": "2.328.0",
             "ephemeral": false,
             "asOf": "2026-10-03T11:59:51Z",
-            "stale": false
+            "stale": false,
+            "update": {
+              "latest": "2.329.0",
+              "missingSince": "2026-09-21T12:00:00Z",
+              "overdue": false
+            }
           },
           "local": null,
           "currentJob": null,
@@ -1831,7 +1842,8 @@
         "version": "2.329.0",
         "ephemeral": false,
         "asOf": "2026-10-03T11:59:51Z",
-        "stale": false
+        "stale": false,
+        "update": null
       },
       "local": null,
       "currentJob": null,

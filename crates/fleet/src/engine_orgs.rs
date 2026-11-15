@@ -1,4 +1,5 @@
-//! GitHub organizations: adding and signing in, the cached API clients, and runner and job polls.
+//! GitHub organizations: adding and signing in, the cached API clients, and runner, job and
+//! release polls.
 
 use std::sync::Arc;
 
@@ -10,6 +11,9 @@ use crate::gh;
 use crate::github::{GithubClient, GithubError};
 use crate::model::{OrgAuth, OrgConfig, OrgObservation, RepoScope, Timed, default_api_base};
 use crate::sync::{MutexExt, RwLockExt};
+
+/// How often recent `actions/runner` releases are read.
+const RELEASE_CHECK_EVERY: chrono::Duration = chrono::Duration::hours(1);
 
 #[derive(Debug, thiserror::Error)]
 enum GithubAuthError {
@@ -136,6 +140,7 @@ impl Engine {
         .await;
     }
 
+    /// Organization runners for every org, then runner releases when due.
     pub async fn poll_github_runners(&self) {
         self.poll_github(
             async |client, org| client.org_runners(&org.login).await,
@@ -145,6 +150,43 @@ impl Engine {
             |org| (&mut org.runners, &mut org.error),
         )
         .await;
+        self.poll_runner_releases().await;
+    }
+
+    /// Reads recent `actions/runner` releases at most hourly, through the first github.com
+    /// organization that can. GitHub Enterprise Server organizations are never used.
+    async fn poll_runner_releases(&self) {
+        let now = Utc::now();
+        if self
+            .obs
+            .read_locked()
+            .runner_releases_checked_at
+            .is_some_and(|at| now - at < RELEASE_CHECK_EVERY)
+        {
+            return;
+        }
+        let orgs: Vec<OrgConfig> = self
+            .config()
+            .orgs
+            .into_iter()
+            .filter(|o| o.api_base.trim_end_matches('/') == default_api_base())
+            .collect();
+        if orgs.is_empty() {
+            return;
+        }
+        self.obs.write_locked().runner_releases_checked_at = Some(now);
+        for org in &orgs {
+            let Ok(client) = self.github_client(org).await else {
+                continue;
+            };
+            match client.runner_releases().await {
+                Ok(releases) => {
+                    self.obs.write_locked().runner_releases = Some(Timed::new(now, releases));
+                    return;
+                }
+                Err(e) => tracing::warn!("couldn't read the actions/runner releases through {}: {e}", org.login),
+            }
+        }
     }
 
     pub async fn poll_github_jobs(&self) {

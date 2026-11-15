@@ -607,3 +607,46 @@ fn identity_conflicts_do_not_reuse_previously_checked_local_facts() {
     assert!(studio.runners.iter().all(|r| r.local.is_none()));
     assert!(studio.desired.as_ref().unwrap().plan.iter().all(|item| item.blocked));
 }
+
+#[test]
+fn overdue_runner_updates_are_findings_only_on_machines() {
+    let mut f = Fixture::new();
+    with_inventory(&mut f);
+    let behind = |id, name, labels| GhRunner {
+        version: Some("2.329.0".into()),
+        ..gh(id, name, "online", false, labels)
+    };
+    f.gh_runners(
+        ago(10),
+        vec![behind(1, "mini-01", MAC), behind(3, "depot-x", &["self-hosted"])],
+    );
+    let release = crate::runner_version::RunnerRelease {
+        version: "2.330.0".into(),
+        published_at: now() - Duration::days(40),
+    };
+    f.obs.runner_releases = Some(Timed::new(ago(60), vec![release.clone()]));
+
+    let v = f.view();
+    let overdue = Some(crate::runner_version::RunnerUpdate {
+        latest: "2.330.0".into(),
+        missing_since: now() - Duration::days(40),
+        overdue: true,
+    });
+    let on_machine = v.machines[0].runners.iter().find(|r| r.name == "mini-01").unwrap();
+    assert_eq!(on_machine.github.as_ref().unwrap().update, overdue);
+    // A hosted pool's runner shows the same fact, but it isn't ours to update.
+    assert_eq!(v.unmatched_runners[0].github.as_ref().unwrap().update, overdue);
+    let updates: Vec<(&str, &str)> = v
+        .issues
+        .iter()
+        .filter(|i| i.id.ends_with(":update"))
+        .map(|i| (i.id.as_str(), i.title.as_str()))
+        .collect();
+    assert_eq!(updates, [("gh:acme:1:update", "mini-01: runner update overdue")]);
+
+    // Releases read over a day ago may miss newer ones, so nothing is compared.
+    f.obs.runner_releases = Some(Timed::new(now() - Duration::days(2), vec![release]));
+    let v = f.view();
+    assert_eq!(v.unmatched_runners[0].github.as_ref().unwrap().update, None);
+    assert!(v.issues.iter().all(|i| !i.id.ends_with(":update")));
+}

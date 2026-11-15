@@ -12,8 +12,8 @@ accepting feature requests, but you're welcome to fork it and make it your own.
 - **Mac app** (Tauri 2 + React). Machines come from your tailnet. The sidebar lists each runner
   machine with its runners nested under it, below a fleet overview. A machine's pane shows its
   status, SSH health, diagnostics, inventory configuration, runner checks and pending changes.
-  A runner's pane shows its GitHub and service state, its jobs, and how it compares with the
-  inventory.
+  A runner's pane shows its GitHub and service state, its jobs, how it compares with the
+  inventory, and whether it's behind the latest `actions/runner` release.
 - **SSH monitoring** reads CPU, load, memory, free disk, uptime and runner configuration from
   the machines. Nothing is installed on the machines.
 - **Event history and alerts** keep observed connections, reboots and runner service changes

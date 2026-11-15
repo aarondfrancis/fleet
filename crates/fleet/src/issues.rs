@@ -298,17 +298,38 @@ fn runner_issues(view: &FleetView) -> Vec<FleetIssue> {
         .chain(&view.other_machines)
         .flat_map(|m| &m.runners)
         .chain(&view.unmatched_runners)
-        .filter(|runner| !runner.warnings.is_empty())
-        .map(|runner| {
-            let mut issue = FleetIssue::new(
-                format!("{}:warnings", runner.key),
-                Runner,
-                &runner.name,
-                runner.warnings.join(" · "),
-            );
-            issue.runner_key = Some(runner.key.clone());
-            issue.machine_id.clone_from(&runner.machine_id);
-            issue
+        .flat_map(|runner| {
+            let warnings = (!runner.warnings.is_empty()).then(|| {
+                FleetIssue::new(
+                    format!("{}:warnings", runner.key),
+                    Runner,
+                    &runner.name,
+                    runner.warnings.join(" · "),
+                )
+            });
+            // Runners update themselves, so only an overdue update needs attention, and only
+            // on a machine: a hosted pool's runners aren't ours to update.
+            let overdue = runner.machine_id.as_ref().and(runner.github.as_ref()).and_then(|g| {
+                let update = g.update.as_ref().filter(|u| u.overdue)?;
+                Some((g.version.as_deref()?, update))
+            });
+            let update = overdue.map(|(version, update)| {
+                FleetIssue::new(
+                    format!("{}:update", runner.key),
+                    Runner,
+                    format!("{}: runner update overdue", runner.name),
+                    format!(
+                        "Runs {version}; the latest release is {}. It has missed an update since {}, and GitHub may stop sending jobs to runners that miss one for 30 days.",
+                        update.latest,
+                        update.missing_since.format("%Y-%m-%d"),
+                    ),
+                )
+            });
+            [warnings, update].into_iter().flatten().map(|mut issue| {
+                issue.runner_key = Some(runner.key.clone());
+                issue.machine_id.clone_from(&runner.machine_id);
+                issue
+            })
         })
         .collect()
 }

@@ -427,6 +427,7 @@ fn checked_github(plan: &FleetPlanInputs, org: &str, name: &str, host: &Host, no
     Some(GhEntry {
         key: format!("gh:{org}:{}", runner.id),
         org: org.to_string(),
+        update: None,
         runner: GhRunner {
             id: u64::try_from(runner.id).ok()?,
             name: runner.name.clone(),

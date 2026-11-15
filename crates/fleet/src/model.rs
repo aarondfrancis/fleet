@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 
 use crate::machine::{DiskStats, MachineReport, OsFamily};
+use crate::runner_version::{RunnerRelease, RunnerUpdate};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -153,6 +154,10 @@ pub struct Observations {
     pub github: BTreeMap<String, OrgObservation>,
     /// Keyed by [`inventory_machine_key`] or [`tailnet_machine_key`].
     pub machines: BTreeMap<String, MachineObservation>,
+    /// Recent `actions/runner` releases.
+    pub runner_releases: Option<Timed<Vec<RunnerRelease>>>,
+    /// The last attempt to read them, successful or not.
+    pub runner_releases_checked_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -454,6 +459,8 @@ pub struct GithubRunnerFacts {
     pub ephemeral: Option<bool>,
     pub as_of: DateTime<Utc>,
     pub stale: bool,
+    /// Set when `version` is behind the latest `actions/runner` release.
+    pub update: Option<RunnerUpdate>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, schemars::JsonSchema)]

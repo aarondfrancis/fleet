@@ -1,10 +1,11 @@
-//! Read-only GitHub REST client for org runners and in-flight jobs.
+//! Read-only GitHub REST client for org runners, in-flight jobs and runner releases.
 //!
 //! - Runners: `GET /orgs/{org}/actions/runners` (fine-grained PAT: org
 //!   "Self-hosted runners: read"; classic: `admin:org`).
 //! - Jobs: there is no org-wide jobs endpoint, so we list
 //!   `GET /repos/{o}/{r}/actions/runs?status=queued|in_progress` per repo in scope,
 //!   then `GET .../runs/{id}/jobs` (repo "Actions: read").
+//! - Releases: `GET /repos/actions/runner/releases`, without drafts and pre-releases.
 //! - Every GET is conditional (ETag); a 304 doesn't count against the rate limit.
 //! - After a primary or secondary rate limit, requests fail fast until the reset or retry time.
 
@@ -21,6 +22,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::model::{GhJob, GhRunner, JobScan, RateLimit, RepoScope};
+use crate::runner_version::RunnerRelease;
 use crate::sync::MutexExt;
 
 pub const API_VERSION: &str = "2026-03-10";
@@ -330,6 +332,31 @@ impl GithubClient {
             )));
         }
         Ok(runners.items.into_iter().map(RawRunner::into_model).collect())
+    }
+
+    /// The latest page of published `actions/runner` releases, newest first.
+    pub async fn runner_releases(&self) -> Result<Vec<RunnerRelease>, GithubError> {
+        #[derive(Deserialize)]
+        struct Release {
+            tag_name: String,
+            #[serde(default)]
+            draft: bool,
+            #[serde(default)]
+            prerelease: bool,
+            published_at: Option<DateTime<Utc>>,
+        }
+        let page = self.get("/repos/actions/runner/releases?per_page=30").await?;
+        let releases: Vec<Release> = decode(page.body)?;
+        Ok(releases
+            .into_iter()
+            .filter(|r| !r.draft && !r.prerelease)
+            .filter_map(|r| {
+                Some(RunnerRelease {
+                    version: r.tag_name.trim_start_matches('v').to_string(),
+                    published_at: r.published_at?,
+                })
+            })
+            .collect())
     }
 
     pub async fn recent_repos(&self, org: &str, max: usize) -> Result<Vec<String>, GithubError> {
@@ -739,6 +766,29 @@ mod tests {
             assert!(matches!(err, GithubError::RateLimited(_)), "{message}: {err:?}");
             assert_paused(&client, &hits, pause, pause).await;
         }
+    }
+
+    #[tokio::test]
+    async fn runner_releases_skip_drafts_and_pre_releases() {
+        let router = Router::new().route(
+            "/repos/actions/runner/releases",
+            get(|| async {
+                Json(json!([
+                    {"tag_name": "v2.331.0", "draft": true, "prerelease": false, "published_at": null},
+                    {"tag_name": "v2.330.1-rc", "draft": false, "prerelease": true, "published_at": "2026-10-02T00:00:00Z"},
+                    {"tag_name": "v2.330.0", "draft": false, "prerelease": false, "published_at": "2026-09-01T00:00:00Z"}
+                ]))
+            }),
+        );
+        let base = serve(router).await;
+        let releases = GithubClient::new(&base, "t").runner_releases().await.unwrap();
+        assert_eq!(
+            releases,
+            vec![RunnerRelease {
+                version: "2.330.0".into(),
+                published_at: "2026-09-01T00:00:00Z".parse().unwrap(),
+            }]
+        );
     }
 
     #[tokio::test]
