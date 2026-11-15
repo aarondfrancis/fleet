@@ -7,7 +7,7 @@ GitHub, and is it doing work right now?
 **Personal project:** This is completely vibe coded for my own personal use case. I won't be
 accepting feature requests, but you're welcome to fork it and make it your own.
 
-![Runner Dashboard fleet overview](docs/screenshot.png)
+![Runner Dashboard fleet overview](docs/screenshot.jpg)
 
 - **Mac app** (Tauri 2 + React). Machines come from your tailnet. The sidebar lists each runner
   machine with its runners nested under it, below a fleet overview. A machine's pane shows its
