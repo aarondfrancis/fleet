@@ -53,7 +53,10 @@ pub fn dataset(now: DateTime<Utc>) -> (AppConfig, Observations) {
         gh(201, "mini-02", true, &["self-hosted", "macOS", "ARM64"]),
         gh(301, "linux-01-a", false, &["self-hosted", "Linux", "X64", "docker"]),
         gh(302, "linux-01-b", false, &["self-hosted", "Linux", "X64", "docker"]),
-        offline(gh(401, "win-builder", false, &["self-hosted", "Windows", "X64"])),
+        offline(GhRunner {
+            version: Some("2.328.0".into()),
+            ..gh(401, "win-builder", false, &["self-hosted", "Windows", "X64"])
+        }),
         gh(501, "cloud-gpu-1", false, &["self-hosted", "Linux", "X64", "gpu"]),
     ];
 
@@ -125,6 +128,15 @@ pub fn dataset(now: DateTime<Utc>) -> (AppConfig, Observations) {
                 peers,
             },
         )),
+        runner_releases: Some(Timed::new(
+            ago(1800),
+            [("2.329.0", 12), ("2.328.0", 45)]
+                .map(|(version, days)| crate::runner_version::RunnerRelease {
+                    version: version.into(),
+                    published_at: now - Duration::days(days),
+                })
+                .to_vec(),
+        )),
         ..Default::default()
     };
     obs.github.insert(
@@ -182,7 +194,7 @@ pub fn dataset(now: DateTime<Utc>) -> (AppConfig, Observations) {
             } else if id == "win-builder" {
                 runners.insert(
                     r.name.clone(),
-                    LocalRunner::new(&r.name, &host.runner_path(r), true, "running", Some("2.329.0")),
+                    LocalRunner::new(&r.name, &host.runner_path(r), true, "running", Some("2.328.0")),
                 );
             }
             if let Some(old) = &r.replaces

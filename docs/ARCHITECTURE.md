@@ -96,6 +96,14 @@ macOS Keychain. Changes always use the `gh` login ([FLEET.md](FLEET.md#setup)). 
 and per-repository workflow jobs are fetched separately; repository scope is configurable in
 Settings.
 
+Recent `actions/runner` releases (no drafts or pre-releases) are read at most hourly through the
+first github.com organization that can; releases read over a day ago aren't compared. A runner
+whose GitHub-reported version is behind the latest has an update available, shown on its pane.
+It's overdue when the oldest release it's missing was published over 30 days ago, GitHub's
+stated limit before it may stop sending the runner jobs. An overdue runner on a machine is a
+finding; one with no machine, such as a hosted pool's, only shows it on its pane. Nothing
+upgrades runners.
+
 The local HTTP API ([HTTP_API.md](HTTP_API.md)) captures one fleet snapshot per request off
 the async runtime and adds provenance and a content-based revision to the response. The shared
 `issues` derivation feeds both the desktop's attention rows and `/v1/issues`; active alerts
