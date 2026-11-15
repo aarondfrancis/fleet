@@ -15,13 +15,15 @@ accepting feature requests, but you're welcome to fork it and make it your own.
   A runner's pane shows its GitHub and service state, its jobs, how it compares with the
   inventory, and whether it's behind the latest `actions/runner` release.
 - **SSH monitoring** reads CPU, load, memory, free disk, uptime and runner configuration from
-  the machines. Nothing is installed on the machines.
+  the machines. Monitoring installs nothing on them.
 - **Event history and alerts** keep observed connections, reboots and runner service changes
   on this Mac, with offline and low-disk alerts and optional desktop notifications.
 
 Monitoring is read-only. Changes go through Runner Fleet's desired-state rules, ported to Rust:
 the app installs, reconciles, retires, decommissions or restarts runners only through reviewed
-plans against your inventory, `inventory/fleet.toml`.
+plans against your inventory, `inventory/fleet.toml`. A Windows host's inventory entry can also
+set its DNS servers and install a network watchdog task; those go through the same reviewed
+apply.
 
 ## Requirements
 
@@ -84,13 +86,13 @@ Windows checks AC and battery power plans and Tailscale unattended mode. The app
 these settings. **Runner checks** (**Run checks**) are the deeper, on-demand inventory and
 prerequisite checks.
 
-**Rename…** beside a machine's name, or **Edit…** in Settings ▸ Machines, gives it a display
-name and description, saved in this Mac's app settings. The sidebar filter searches names,
-descriptions, hosts, runners, labels and current jobs.
+**Edit…** beside a machine's name, or in Settings ▸ Machines, gives it a display name and
+description, saved in this Mac's app settings. The sidebar filter searches names, descriptions,
+hosts, runners, labels and current jobs.
 
-**Check now** on the overview (or **Check** on a machine) compares the fleet with the inventory.
-Every change opens a review first; the [operating guide](docs/FLEET.md#using-the-app) covers
-them.
+**Check now** compares the fleet with the inventory. On a machine's or runner's page it checks
+only that machine. Every change opens a review first; the
+[operating guide](docs/FLEET.md#using-the-app) covers them.
 
 To inspect one inventory host without the app (read-only JSON):
 
@@ -100,11 +102,11 @@ cargo run -q -p fleet --example fleet -- health mini
 
 ## Event history and alerts
 
-The fleet overview and each machine show observed events, kept on this Mac while the app runs.
-Desktop notifications are off by default: turn them on in Settings ▸ General and use **Test
-notification** to check delivery. **Maintenance for 1 hour** on a machine pauses its
-notifications but keeps history and in-app alerts. Thresholds and retention are in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#event-history-and-alerts).
+The fleet overview and each machine show observed events. They're saved on this Mac, and
+recorded only while the app runs. Desktop notifications are off by default: turn them on in
+Settings ▸ General and use **Test notification** to check delivery. **Maintenance for 1 hour**
+on a machine pauses its notifications but keeps history and in-app alerts. Thresholds and
+retention are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#event-history-and-alerts).
 
 ## Local API for scripts and AI agents
 
@@ -121,7 +123,8 @@ curl -s localhost:47622/v1/issues              # the desktop's attention finding
 curl -s localhost:47622/v1/openapi.json        # OpenAPI 3.1 with generated view schemas
 ```
 
-Port, discovery file, security, limits and every route: [docs/HTTP_API.md](docs/HTTP_API.md).
+It's on by default; turning it off in Settings ▸ General takes effect at the next launch. Port,
+discovery file, security, limits and every route: [docs/HTTP_API.md](docs/HTTP_API.md).
 
 ## Environment variables
 
