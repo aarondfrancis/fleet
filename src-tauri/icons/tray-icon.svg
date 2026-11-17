@@ -1,0 +1,11 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Template icon for the menu bar (black on transparent; macOS tints it).
+       The app mark without its background: runner rows stacked into a play
+       triangle. 64x64; macOS scales it. Render tray-icon.png from this file:
+       magick -background none -density 144 tray-icon.svg -resize 64x64 tray-icon.png -->
+  <rect x="7" y="6.5" width="17" height="7" rx="3.5" fill="black"/>
+  <rect x="7" y="17.5" width="33.5" height="7" rx="3.5" fill="black"/>
+  <rect x="7" y="28.5" width="50" height="7" rx="3.5" fill="black"/>
+  <rect x="7" y="39.5" width="33.5" height="7" rx="3.5" fill="black"/>
+  <rect x="7" y="50.5" width="17" height="7" rx="3.5" fill="black"/>
+</svg>

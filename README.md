@@ -14,6 +14,9 @@ accepting feature requests, but you're welcome to fork it and make it your own.
   status, SSH health, diagnostics, inventory configuration, runner checks and pending changes.
   A runner's pane shows its GitHub and service state, its jobs, how it compares with the
   inventory, and whether it's behind the latest `actions/runner` release.
+- **Menu bar item.** Closing the window leaves the app running in the menu bar, so polling,
+  event history and alerts carry on. Its menu shows runner, queue and attention counts and
+  reopens the dashboard. Quit with ⌘Q or the menu's **Quit Runner Dashboard**.
 - **SSH monitoring** reads CPU, load, memory, free disk, uptime and runner configuration from
   the machines. Monitoring installs nothing on them.
 - **Event history and alerts** keep observed connections, reboots and runner service changes

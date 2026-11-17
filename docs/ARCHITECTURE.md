@@ -8,7 +8,7 @@ Nothing is installed on the machines. A bounded local journal keeps observed eve
 | Path | Responsibility |
 | --- | --- |
 | `crates/fleet` | GitHub and Tailscale reads, SSH collection, desired state, view derivation, demo data |
-| `src-tauri` | Desktop commands, menus, windows, polling and GitHub Keychain storage |
+| `src-tauri` | Desktop commands, menus, windows, the menu bar item, polling and GitHub Keychain storage |
 | `src` | React screens and generated Rust view bindings |
 | `inventory/` | The private `fleet.toml` and the tracked example; see [FLEET.md](FLEET.md) |
 

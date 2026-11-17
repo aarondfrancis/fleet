@@ -1,6 +1,7 @@
 //! Background polling. Each source has its own cadence; after every poll the
-//! fresh `FleetView` is pushed to the frontend as `fleet-updated`. A five-second tick
-//! re-derives the view and pushes it only when its content changed.
+//! fresh `FleetView` is pushed to the frontend as `fleet-updated`, and its summary to the
+//! menu bar item. A five-second tick re-derives the view and pushes it only when its
+//! content changed.
 
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -14,6 +15,8 @@ use fleet::monitoring::FleetMachineEvent;
 use fleet::sync::MutexExt;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::watch;
+
+use crate::tray::TrayStatus;
 
 pub const FLEET_UPDATED: &str = "fleet-updated";
 
@@ -75,9 +78,11 @@ pub fn emit_view(app: &AppHandle, engine: &Engine) {
 fn push(app: &AppHandle, derivation: u64, view: FleetView, when: Push) {
     // Emit under the lock so pushes reach the UI in the order they were accepted.
     let mut last = app.state::<Poller>().inner().last_push.locked();
-    if last.accept(derivation, &view, when)
-        && let Err(e) = app.emit(FLEET_UPDATED, view)
-    {
+    if !last.accept(derivation, &view, when) {
+        return;
+    }
+    app.state::<TrayStatus>().show(&view.summary);
+    if let Err(e) = app.emit(FLEET_UPDATED, view) {
         tracing::warn!("emit failed: {e}");
     }
 }
