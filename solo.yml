@@ -19,3 +19,8 @@ processes:
   Browser preview:
     command: pnpm dev
     auto_start: false
+  # Empties the real build directory. A plain `cargo clean` only removes a `target` symlink
+  # and leaves what it points at, so this resolves the link and puts the directory back.
+  Clear Rust build artifacts:
+    command: t=$(cd target && pwd -P) && CARGO_TARGET_DIR="$t" cargo clean && mkdir -p "$t"
+    auto_start: false
