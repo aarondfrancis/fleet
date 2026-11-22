@@ -189,6 +189,7 @@ impl Engine {
         }
     }
 
+    /// Scans in-flight jobs, then records the self-hosted jobs of runs that left the scan.
     pub async fn poll_github_jobs(&self) {
         self.poll_github(
             async |client, org| client.scan_jobs(&org.login, &org.repo_scope).await,
@@ -198,6 +199,7 @@ impl Engine {
             |org| (&mut org.jobs, &mut org.jobs_error),
         )
         .await;
+        self.update_job_history().await;
     }
 
     /// Adds an org after checking the credential can list its runners.

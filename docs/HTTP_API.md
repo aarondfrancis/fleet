@@ -23,7 +23,7 @@ host configuration.
 | Route | Filters and result |
 | --- | --- |
 | `GET /` | Capabilities, limits and semantics |
-| `GET /v1/fleet` | Complete FleetView, including `otherMachines` and `issues` |
+| `GET /v1/fleet` | Complete FleetView, including `otherMachines`, `issues` and the Activity summary (`activity`) |
 | `GET /v1/summary` | Summary, organization and tailnet status |
 | `GET /v1/machines` | `scope=all` (default), `fleet` or `discovered`; `os`, `connection`, `q`, `after`, `limit` |
 | `GET /v1/machines/{id}` | One machine |

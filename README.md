@@ -21,6 +21,8 @@ accepting feature requests, but you're welcome to fork it and make it your own.
   the machines. Monitoring installs nothing on them.
 - **Event history and alerts** keep observed connections, reboots and runner service changes
   on this Mac, with offline and low-disk alerts and optional desktop notifications.
+- **Activity** records finished self-hosted jobs on this Mac for 30 days: success rate, busy time
+  per machine, queue wait, top repositories and an estimated GitHub-hosted cost.
 
 Monitoring is read-only. Changes go through Runner Fleet's desired-state rules, ported to Rust:
 the app installs, reconciles, retires, decommissions or restarts runners only through reviewed
