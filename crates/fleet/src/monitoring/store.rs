@@ -27,6 +27,21 @@ struct Journal {
     #[serde(default)]
     notification_retry_at: Option<DateTime<Utc>>,
 }
+impl Journal {
+    /// Earlier versions also watched tailnet devices outside the inventory, keyed `ts:<node id>`.
+    /// Only inventory machines are monitored now, keyed by host, so that history leaves on load.
+    fn without_outside_devices(mut self) -> Self {
+        self.machines.retain(|key, _| !is_tailnet_machine_key(key));
+        self.events.retain(|e| !is_tailnet_machine_key(&e.machine_key));
+        self.pending_notifications
+            .retain(|e| !is_tailnet_machine_key(&e.machine_key));
+        if self.pending_notifications.is_empty() {
+            self.notification_retry_at = None;
+        }
+        self
+    }
+}
+
 impl Default for Journal {
     fn default() -> Self {
         Self {
@@ -57,7 +72,7 @@ impl MonitorStore {
                 .map_err(|e| e.to_string())
                 .and_then(|j| {
                     if j.version == 1 {
-                        Ok(j)
+                        Ok(j.without_outside_devices())
                     } else {
                         Err(format!("Unsupported history version {}.", j.version))
                     }
@@ -95,13 +110,13 @@ impl MonitorStore {
             .machines
             .iter()
             .filter(|m| !matches!(m.connection, MachineConnection::Disabled))
-            .flat_map(|m| [m.preferences_key(), m.id.clone()])
+            .map(MachineView::preferences_key)
             .collect();
         let disabled: BTreeSet<_> = view
             .machines
             .iter()
             .filter(|m| matches!(m.connection, MachineConnection::Disabled))
-            .flat_map(|m| [m.preferences_key(), m.id.clone()])
+            .map(MachineView::preferences_key)
             .collect();
         // Absence is authoritative only with a current discovery and a loaded inventory.
         // Failed or pending inputs can temporarily hide machines without removing them.
@@ -119,7 +134,7 @@ impl MonitorStore {
                 continue;
             }
             // Wait for evidence. Loading an inventory is not a machine observation.
-            let key = self.key(machine);
+            let key = machine.preferences_key();
             if (network_at.is_none() || machine.tailnet.is_none())
                 && machine.health.as_ref().is_none_or(|h| h.stale)
                 && !self.journal.machines.contains_key(&key)
@@ -156,16 +171,6 @@ impl MonitorStore {
                 changed = true;
             }
             self.journal.machines.insert(key, state);
-        }
-        if complete {
-            // Earlier versions also watched tailnet devices outside the inventory, under their
-            // tailnet key. Only inventory machines are monitored now, so that history leaves.
-            let outside =
-                |key: &String| is_tailnet_machine_key(key) && !eligible.contains(key) && !disabled.contains(key);
-            let before = (self.journal.machines.len(), self.journal.events.len());
-            self.journal.machines.retain(|key, _| !outside(key));
-            self.journal.events.retain(|e| !outside(&e.machine_key));
-            changed |= before != (self.journal.machines.len(), self.journal.events.len());
         }
         let cutoff = now - EVENT_RETENTION;
         self.journal.events.retain(|e| e.at >= cutoff);
@@ -247,27 +252,6 @@ impl MonitorStore {
         self.acknowledge_notifications(&events)
     }
 
-    fn key(&mut self, machine: &MachineView) -> String {
-        let key = machine.preferences_key();
-        if key != machine.id
-            && !self.journal.machines.contains_key(&key)
-            && let Some(state) = self.journal.machines.remove(&machine.id)
-        {
-            self.journal.machines.insert(key.clone(), state);
-            for event in &mut self.journal.events {
-                if event.machine_key == machine.id {
-                    event.machine_key.clone_from(&key);
-                }
-            }
-            for event in &mut self.journal.pending_notifications {
-                if event.machine_key == machine.id {
-                    event.machine_key.clone_from(&key);
-                }
-            }
-        }
-        key
-    }
-
     fn event(
         &mut self,
         key: &str,
@@ -297,11 +281,7 @@ impl MonitorStore {
         view.monitoring.alerts.clear();
         for machine in &mut view.machines {
             let key = machine.preferences_key();
-            let state = self
-                .journal
-                .machines
-                .get(&key)
-                .or_else(|| self.journal.machines.get(&machine.id));
+            let state = self.journal.machines.get(&key);
             let disabled = matches!(machine.connection, MachineConnection::Disabled);
             let alerts = state
                 .filter(|s| !disabled && s.target == target(machine))
@@ -355,7 +335,7 @@ impl MonitorStore {
         now: DateTime<Utc>,
     ) -> Result<(), String> {
         let original = self.journal.clone();
-        let key = self.key(machine);
+        let key = machine.preferences_key();
         let state = self.journal.machines.entry(key.clone()).or_default();
         state.target = target(machine);
         state.name.clone_from(&machine.display_name);

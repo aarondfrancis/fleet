@@ -1,6 +1,8 @@
 //! Add machine: the inventory entry for a tailnet device outside the inventory.
 //! Built from the tailnet snapshot alone. Nothing here contacts the device.
 
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -17,8 +19,13 @@ pub struct TailnetDeviceView {
     pub inventory_entry: String,
 }
 
-/// `None` for a device no inventory platform fits, such as a phone.
-pub(crate) fn device_view(peer: &TailnetPeer, organization: Option<&str>) -> Option<TailnetDeviceView> {
+/// `None` for a device no inventory platform fits, such as a phone. `taken` holds the host IDs
+/// already in use, so a pasted entry never duplicates one; this entry's ID is added to it.
+pub(crate) fn device_view(
+    peer: &TailnetPeer,
+    organization: Option<&str>,
+    taken: &mut HashSet<String>,
+) -> Option<TailnetDeviceView> {
     let platform = match peer.os.to_ascii_lowercase().as_str() {
         "macos" => Platform::DarwinArm64,
         "linux" => Platform::LinuxX64,
@@ -44,7 +51,7 @@ pub(crate) fn device_view(peer: &TailnetPeer, organization: Option<&str>) -> Opt
     let quote = |value: &str| toml::Value::String(value.into()).to_string();
     let inventory_entry = format!(
         "[[hosts]]\nid = {}\nplatform = {}{platform_note}\nssh = {}\nssh_transport = {}\nroot = {}\nservice_mode = {}\n",
-        quote(&host_id(&peer.hostname)),
+        quote(&unique_host_id(&peer.hostname, taken)),
         quote(platform.as_str()),
         quote(&peer.address()),
         quote(transport.as_str()),
@@ -56,6 +63,16 @@ pub(crate) fn device_view(peer: &TailnetPeer, organization: Option<&str>) -> Opt
         name: peer.hostname.clone(),
         inventory_entry,
     })
+}
+
+fn unique_host_id(hostname: &str, taken: &mut HashSet<String>) -> String {
+    let base = host_id(hostname);
+    let id = (1..)
+        .map(|n| if n == 1 { base.clone() } else { format!("{base}-{n}") })
+        .find(|id| !taken.contains(id))
+        .unwrap_or(base);
+    taken.insert(id.clone());
+    id
 }
 
 /// A valid inventory host ID from a tailnet hostname.
@@ -122,7 +139,7 @@ mod tests {
                 Vec::new(),
             ),
         ] {
-            let device = device_view(&peer("Dev Box", os, keys), Some("acme")).unwrap();
+            let device = device_view(&peer("Dev Box", os, keys), Some("acme"), &mut HashSet::new()).unwrap();
             assert_eq!(device.name, "Dev Box");
             let inventory = parse_inventory(
                 &format!("{ORGANIZATION}{}", device.inventory_entry),
@@ -141,7 +158,27 @@ mod tests {
 
     #[test]
     fn devices_no_platform_fits_are_not_offered() {
-        assert!(device_view(&peer("phone", "iOS", Vec::new()), Some("acme")).is_none());
-        assert!(device_view(&peer("tv", "android", Vec::new()), None).is_none());
+        assert!(device_view(&peer("phone", "iOS", Vec::new()), Some("acme"), &mut HashSet::new()).is_none());
+        assert!(device_view(&peer("tv", "android", Vec::new()), None, &mut HashSet::new()).is_none());
+    }
+
+    #[test]
+    fn entries_pasted_together_into_an_inventory_keep_it_valid() {
+        let example = include_str!("../../../inventory/fleet.example.toml");
+        let inventory = parse_inventory(example, &Default::default()).unwrap();
+        let mut taken = inventory.hosts.iter().map(|h| h.id.clone()).collect();
+        // One device shares an inventory host's ID, and two share a name with each other.
+        let entries: Vec<_> = [
+            peer("Studio", "macOS", Vec::new()),
+            peer("box", "linux", Vec::new()),
+            peer("BOX", "linux", Vec::new()),
+        ]
+        .iter()
+        .map(|p| device_view(p, Some("acme"), &mut taken).unwrap().inventory_entry)
+        .collect();
+        let combined = parse_inventory(&format!("{example}\n{}", entries.join("\n")), &Default::default())
+            .unwrap_or_else(|e| panic!("{e}"));
+        let ids: Vec<_> = combined.hosts.iter().rev().take(3).map(|h| h.id.as_str()).collect();
+        assert_eq!(ids, ["box-2", "box", "studio-2"]);
     }
 }

@@ -46,8 +46,9 @@ Machines use `ts:<node id>` as their UI identity, or `inv:<host id>` without a t
 Inventory SSH aliases resolve through `ssh -G`. Machines are the inventory's hosts only. A tailnet
 device no host claims gets no machine view, no SSH read, no issue and no monitoring state. Add
 machine lists such desktop and server devices by name from the tailnet snapshot, with a
-`[[hosts]]` entry built in `add_machine.rs`. History that older versions saved under a tailnet key
-for such a device is dropped on the first refresh with a fresh tailnet and a loaded inventory.
+`[[hosts]]` entry built in `add_machine.rs`, with an ID no inventory host or other entry uses.
+Monitoring keys history by inventory host. History that older versions saved under a tailnet key
+(`ts:<node id>`) belonged to devices outside the inventory, so it is dropped when the history loads.
 When the inventory fails to load, the overview says why, with the error and the inventory path.
 
 The UI receives fleet-updated events after polls and every five seconds so ages advance.

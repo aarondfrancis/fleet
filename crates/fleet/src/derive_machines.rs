@@ -92,7 +92,7 @@ pub(super) fn assemble(
     let Some(inventory) = plan.inventory.as_ref().and_then(|r| r.as_ref().ok()) else {
         return Machines {
             fleet: Vec::new(),
-            devices: devices(&peers, &HashSet::new(), None),
+            devices: devices(&peers, &HashSet::new(), None, HashSet::new()),
         };
     };
     let ctx = DeriveCtx {
@@ -124,19 +124,28 @@ pub(super) fn assemble(
     fleet.sort_by_key(|m| (m.display_name.to_lowercase(), m.id.clone()));
     Machines {
         fleet,
-        devices: devices(&peers, &claimed, Some(&inventory.organization.name)),
+        devices: devices(
+            &peers,
+            &claimed,
+            Some(&inventory.organization.name),
+            inventory.hosts.iter().map(|h| h.id.clone()).collect(),
+        ),
     }
 }
 
-/// Tailnet devices for Add machine, by name.
-fn devices(peers: &[TailnetPeer], claimed: &HashSet<&str>, organization: Option<&str>) -> Vec<TailnetDeviceView> {
-    let mut devices: Vec<_> = peers
-        .iter()
-        .filter(|p| !claimed.contains(p.node_id.as_str()))
-        .filter_map(|p| device_view(p, organization))
-        .collect();
-    devices.sort_by_key(|d| (d.name.to_lowercase(), d.node_id.clone()));
-    devices
+/// Tailnet devices for Add machine, by name. `host_ids` are the inventory's, which entries never reuse.
+fn devices(
+    peers: &[TailnetPeer],
+    claimed: &HashSet<&str>,
+    organization: Option<&str>,
+    mut host_ids: HashSet<String>,
+) -> Vec<TailnetDeviceView> {
+    let mut unclaimed: Vec<_> = peers.iter().filter(|p| !claimed.contains(p.node_id.as_str())).collect();
+    unclaimed.sort_by_key(|p| (p.hostname.to_lowercase(), p.node_id.clone()));
+    unclaimed
+        .into_iter()
+        .filter_map(|p| device_view(p, organization, &mut host_ids))
+        .collect()
 }
 
 /// One slot per inventory host, matched to its tailnet peer, and the peers they claim.
