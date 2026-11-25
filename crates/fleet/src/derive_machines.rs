@@ -89,10 +89,11 @@ pub(super) fn assemble(
                 .collect()
         })
         .unwrap_or_default();
+    // Without a loaded inventory nothing says which peers are already enrolled.
     let Some(inventory) = plan.inventory.as_ref().and_then(|r| r.as_ref().ok()) else {
         return Machines {
             fleet: Vec::new(),
-            devices: devices(&peers, &HashSet::new(), None, HashSet::new()),
+            devices: Vec::new(),
         };
     };
     let ctx = DeriveCtx {
@@ -105,15 +106,12 @@ pub(super) fn assemble(
     };
 
     let (slots, claimed) = slots(&peers, inventory, &plan.ssh_hosts);
-    // A host whose SSH alias isn't resolved yet may still claim a peer, so offering
-    // peers before then could suggest adding a machine the inventory already has.
-    let ownership_known = slots.iter().all(|s| {
-        s.peer.is_some()
-            || s.identity_error.is_some()
-            || s.host
-                .ssh_target
-                .as_ref()
-                .is_none_or(|t| plan.ssh_targets_resolved.contains(t))
+    // Until every SSH target has been resolved, a host may still claim a different peer
+    // than its written name matches, so an offer could duplicate an enrolled machine.
+    let ownership_known = inventory.hosts.iter().all(|h| {
+        h.ssh_target
+            .as_ref()
+            .is_none_or(|t| plan.ssh_targets_resolved.contains(t))
     });
     let mut fleet = Vec::new();
     for slot in &slots {
@@ -138,7 +136,7 @@ pub(super) fn assemble(
             devices(
                 &peers,
                 &claimed,
-                Some(&inventory.organization.name),
+                &inventory.organization.name,
                 inventory.hosts.iter().map(|h| h.id.clone()).collect(),
             )
         } else {
@@ -151,7 +149,7 @@ pub(super) fn assemble(
 fn devices(
     peers: &[TailnetPeer],
     claimed: &HashSet<&str>,
-    organization: Option<&str>,
+    organization: &str,
     mut host_ids: HashSet<String>,
 ) -> Vec<TailnetDeviceView> {
     let mut unclaimed: Vec<_> = peers.iter().filter(|p| !claimed.contains(p.node_id.as_str())).collect();

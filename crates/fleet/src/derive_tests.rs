@@ -452,6 +452,24 @@ fn discovery_and_demo_cover_current_stale_offline_and_failed_ssh() {
 }
 
 #[test]
+fn add_machine_offers_nothing_until_inventory_ownership_is_known() {
+    let (config, obs, mut plan) = demo();
+    let offered = |plan: &crate::fleet_plan::FleetPlanInputs| {
+        derive(&config, &obs, plan, now(), DataSource::Demo)
+            .tailnet_devices
+            .len()
+    };
+    assert_eq!(offered(&plan), 3);
+    // An unresolved SSH target may still claim a peer its written name doesn't match.
+    let resolved = std::mem::take(&mut plan.ssh_targets_resolved);
+    assert_eq!(offered(&plan), 0);
+    plan.ssh_targets_resolved = resolved;
+    // A broken inventory says nothing about which peers are enrolled.
+    plan.inventory = Some(Err("TOML: expected a table".into()));
+    assert_eq!(offered(&plan), 0);
+}
+
+#[test]
 fn a_newer_explicit_check_supersedes_old_poll_runner_facts_and_errors() {
     let (config, mut obs, mut plan) = demo();
     let observation = obs.machines.get_mut("inv:studio").unwrap();

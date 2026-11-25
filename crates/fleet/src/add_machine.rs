@@ -23,7 +23,7 @@ pub struct TailnetDeviceView {
 /// already in use, so a pasted entry never duplicates one; this entry's ID is added to it.
 pub(crate) fn device_view(
     peer: &TailnetPeer,
-    organization: Option<&str>,
+    organization: &str,
     taken: &mut HashSet<String>,
 ) -> Option<TailnetDeviceView> {
     let platform = match peer.os.to_ascii_lowercase().as_str() {
@@ -32,11 +32,10 @@ pub(crate) fn device_view(
         "windows" => Platform::WindowsX64,
         _ => return None,
     };
-    let folder = organization.unwrap_or("runners");
     let root = if platform.is_windows() {
-        format!("C:\\gh-runners\\{folder}")
+        format!("C:\\gh-runners\\{organization}")
     } else {
-        format!("~/gh-runners/{folder}")
+        format!("~/gh-runners/{organization}")
     };
     let transport = if peer.ssh_host_keys.is_empty() {
         SshTransport::Openssh
@@ -139,7 +138,7 @@ mod tests {
                 Vec::new(),
             ),
         ] {
-            let device = device_view(&peer("Dev Box", os, keys), Some("acme"), &mut HashSet::new()).unwrap();
+            let device = device_view(&peer("Dev Box", os, keys), "acme", &mut HashSet::new()).unwrap();
             assert_eq!(device.name, "Dev Box");
             let inventory = parse_inventory(
                 &format!("{ORGANIZATION}{}", device.inventory_entry),
@@ -158,8 +157,8 @@ mod tests {
 
     #[test]
     fn devices_no_platform_fits_are_not_offered() {
-        assert!(device_view(&peer("phone", "iOS", Vec::new()), Some("acme"), &mut HashSet::new()).is_none());
-        assert!(device_view(&peer("tv", "android", Vec::new()), None, &mut HashSet::new()).is_none());
+        assert!(device_view(&peer("phone", "iOS", Vec::new()), "acme", &mut HashSet::new()).is_none());
+        assert!(device_view(&peer("tv", "android", Vec::new()), "acme", &mut HashSet::new()).is_none());
     }
 
     #[test]
@@ -174,7 +173,7 @@ mod tests {
             peer("BOX", "linux", Vec::new()),
         ]
         .iter()
-        .map(|p| device_view(p, Some("acme"), &mut taken).unwrap().inventory_entry)
+        .map(|p| device_view(p, "acme", &mut taken).unwrap().inventory_entry)
         .collect();
         let combined = parse_inventory(&format!("{example}\n{}", entries.join("\n")), &Default::default())
             .unwrap_or_else(|e| panic!("{e}"));

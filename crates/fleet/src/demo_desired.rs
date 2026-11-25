@@ -209,6 +209,7 @@ pub fn plan_inputs(now: DateTime<Utc>) -> FleetPlanInputs {
     FleetPlanInputs {
         inventory_path: "demo: inventory/fleet.toml".into(),
         host_checked_at: inventory.hosts.iter().map(|h| (h.id.clone(), checked)).collect(),
+        ssh_targets_resolved: inventory.hosts.iter().filter_map(|h| h.ssh_target.clone()).collect(),
         inventory: Some(Ok(inventory)),
         snapshot: Some(snapshot()),
         checked_at: Some(checked),
