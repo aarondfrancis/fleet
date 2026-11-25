@@ -106,13 +106,12 @@ pub(super) fn assemble(
     };
 
     let (slots, claimed) = slots(&peers, inventory, &plan.ssh_hosts);
-    // Until every SSH target has been resolved, a host may still claim a different peer
-    // than its written name matches, so an offer could duplicate an enrolled machine.
-    let ownership_known = inventory.hosts.iter().all(|h| {
-        h.ssh_target
-            .as_ref()
-            .is_none_or(|t| plan.ssh_targets_resolved.contains(t))
-    });
+    // Until SSH has resolved every host's target, a host may own a different peer than its
+    // written name matches, so an offer could duplicate an enrolled machine.
+    let ownership_known = inventory
+        .hosts
+        .iter()
+        .all(|h| h.ssh_target.as_ref().is_some_and(|t| plan.ssh_hosts.contains_key(t)));
     let mut fleet = Vec::new();
     for slot in &slots {
         let mut view = machine_view(slot, &ctx, matched);

@@ -1,7 +1,7 @@
 //! What the engine keeps between desired-state calls: the cached inventory,
 //! the last check, doctor results, pending reviews and the running change.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
@@ -29,8 +29,6 @@ pub struct DesiredStore {
     pub(super) starting: bool,
     /// SSH target → the hostname SSH resolves it to, from the last check.
     pub(super) ssh_hosts: BTreeMap<String, String>,
-    /// SSH targets the last resolution covered, resolved or not.
-    pub(super) ssh_targets_resolved: BTreeSet<String>,
     /// The parsed inventory, re-read when the file changes.
     inventory: Option<InventoryCache>,
 }
@@ -197,7 +195,6 @@ impl Engine {
                 .map(|s| s.host_checked_at.clone())
                 .unwrap_or_default(),
             ssh_hosts: store.ssh_hosts.clone(),
-            ssh_targets_resolved: store.ssh_targets_resolved.clone(),
             doctor: store.doctor.clone(),
             refreshing: store.refreshing,
             doctor_running: store.doctor_running,

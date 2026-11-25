@@ -461,9 +461,14 @@ fn add_machine_offers_nothing_until_inventory_ownership_is_known() {
     };
     assert_eq!(offered(&plan), 3);
     // An unresolved SSH target may still claim a peer its written name doesn't match.
-    let resolved = std::mem::take(&mut plan.ssh_targets_resolved);
+    let (target, hostname) = plan.ssh_hosts.pop_first().unwrap();
     assert_eq!(offered(&plan), 0);
-    plan.ssh_targets_resolved = resolved;
+    plan.ssh_hosts.insert(target, hostname);
+    assert_eq!(offered(&plan), 3);
+    // So may a host whose `ssh = "${VAR}"` is unset, since its target is unknown.
+    let inventory = plan.inventory.as_mut().unwrap().as_mut().unwrap();
+    inventory.hosts[0].ssh_target = None;
+    assert_eq!(offered(&plan), 0);
     // A broken inventory says nothing about which peers are enrolled.
     plan.inventory = Some(Err("TOML: expected a table".into()));
     assert_eq!(offered(&plan), 0);
