@@ -538,7 +538,8 @@ async fn ssh_aliases_resolve_to_their_tailnet_machine() {
     engine.poll_tailscale().await;
     // Before SSH resolves the alias, the host and the tailnet machine are separate.
     assert_eq!(machine(&engine, "mini").id, "inv:mini", "before SSH is resolved");
-    assert_eq!(engine.view().tailnet_devices.len(), 1);
+    // The peer may be the inventory's, so Add machine waits instead of offering it.
+    assert!(engine.view().tailnet_devices.is_empty());
     engine.desired_refresh(None).await.unwrap();
     // After: one machine, keyed by its tailnet node.
     let mini = machine(&engine, "mini");

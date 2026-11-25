@@ -214,6 +214,7 @@ impl Engine {
     pub(super) async fn resolve_ssh_hosts(&self, inventory: &Inventory) -> BTreeMap<String, SshTransportIdentity> {
         let resolve = self.desired_io.resolve_ssh_transport.clone();
         let targets: Vec<String> = inventory.hosts.iter().filter_map(|h| h.ssh_target.clone()).collect();
+        let attempted = targets.iter().cloned().collect();
         let resolved = run_blocking("resolve SSH hosts", move || {
             targets
                 .into_iter()
@@ -230,10 +231,13 @@ impl Engine {
                 return BTreeMap::new();
             }
         };
-        self.desired.locked().ssh_hosts = resolved
+        let mut store = self.desired.locked();
+        store.ssh_hosts = resolved
             .iter()
             .map(|(target, identity)| (target.clone(), identity.hostname().to_string()))
             .collect();
+        store.ssh_targets_resolved = attempted;
+        drop(store);
         resolved
     }
 

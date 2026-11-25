@@ -105,6 +105,16 @@ pub(super) fn assemble(
     };
 
     let (slots, claimed) = slots(&peers, inventory, &plan.ssh_hosts);
+    // A host whose SSH alias isn't resolved yet may still claim a peer, so offering
+    // peers before then could suggest adding a machine the inventory already has.
+    let ownership_known = slots.iter().all(|s| {
+        s.peer.is_some()
+            || s.identity_error.is_some()
+            || s.host
+                .ssh_target
+                .as_ref()
+                .is_none_or(|t| plan.ssh_targets_resolved.contains(t))
+    });
     let mut fleet = Vec::new();
     for slot in &slots {
         let mut view = machine_view(slot, &ctx, matched);
@@ -124,12 +134,16 @@ pub(super) fn assemble(
     fleet.sort_by_key(|m| (m.display_name.to_lowercase(), m.id.clone()));
     Machines {
         fleet,
-        devices: devices(
-            &peers,
-            &claimed,
-            Some(&inventory.organization.name),
-            inventory.hosts.iter().map(|h| h.id.clone()).collect(),
-        ),
+        devices: if ownership_known {
+            devices(
+                &peers,
+                &claimed,
+                Some(&inventory.organization.name),
+                inventory.hosts.iter().map(|h| h.id.clone()).collect(),
+            )
+        } else {
+            Vec::new()
+        },
     }
 }
 

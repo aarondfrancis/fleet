@@ -275,6 +275,8 @@ async fn tailnet_devices_outside_the_inventory_are_never_contacted_listed_or_lab
     let fake = Arc::new(FakeMachine::default());
     let (_dir, engine) = fixture(fake.clone(), INVENTORY);
     engine.poll_tailscale().await;
+    // Until `mini-alias` resolves, the `mini` peer may be the inventory's, so nothing is offered.
+    assert!(engine.view().tailnet_devices.is_empty());
     engine.poll_machines().await;
     engine.poll_machines().await;
     assert_eq!(*fake.calls.lock().unwrap(), ["mini-alias", "mini-alias"]);

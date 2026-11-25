@@ -150,6 +150,8 @@ pub struct FleetPlanInputs {
     pub host_checked_at: BTreeMap<String, DateTime<Utc>>,
     /// SSH target → the hostname SSH resolves it to.
     pub ssh_hosts: BTreeMap<String, String>,
+    /// SSH targets the last resolution covered, resolved or not.
+    pub ssh_targets_resolved: BTreeSet<String>,
     pub doctor: Option<DoctorView>,
     pub refreshing: bool,
     pub doctor_running: bool,

@@ -124,4 +124,3 @@ function ConnectionNotice({ m }: { m: MachineView }) {
       return null;
   }
 }
-

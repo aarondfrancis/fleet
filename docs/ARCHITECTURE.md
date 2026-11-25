@@ -47,6 +47,8 @@ Inventory SSH aliases resolve through `ssh -G`. Machines are the inventory's hos
 device no host claims gets no machine view, no SSH read, no issue and no monitoring state. Add
 machine lists such desktop and server devices by name from the tailnet snapshot, with a
 `[[hosts]]` entry built in `add_machine.rs`, with an ID no inventory host or other entry uses.
+It offers nothing while an inventory host's SSH alias is unresolved, since that host may own a
+peer that looks unclaimed.
 Monitoring keys history by inventory host. History that older versions saved under a tailnet key
 (`ts:<node id>`) belonged to devices outside the inventory, so it is dropped when the history loads.
 When the inventory fails to load, the overview says why, with the error and the inventory path.
