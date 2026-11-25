@@ -538,13 +538,13 @@ async fn ssh_aliases_resolve_to_their_tailnet_machine() {
     engine.poll_tailscale().await;
     // Before SSH resolves the alias, the host and the tailnet machine are separate.
     assert_eq!(machine(&engine, "mini").id, "inv:mini", "before SSH is resolved");
-    assert_eq!(engine.view().other_machines.len(), 1);
+    assert_eq!(engine.view().tailnet_devices.len(), 1);
     engine.desired_refresh(None).await.unwrap();
     // After: one machine, keyed by its tailnet node.
     let mini = machine(&engine, "mini");
     assert_eq!(mini.id, "ts:nMini");
     assert_eq!(mini.tailnet.unwrap().node_id, "nMini");
-    assert!(engine.view().other_machines.is_empty());
+    assert!(engine.view().tailnet_devices.is_empty());
 }
 
 async fn review_restart(f: &Fixture) -> fleet::engine::desired::ReviewView {

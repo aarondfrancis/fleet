@@ -142,14 +142,13 @@ mod tests {
         let mini = snap.peers.iter().find(|p| p.node_id == "nMini").unwrap();
         assert_eq!(mini.dns_name.as_deref(), Some("mac-mini.tail1.ts.net"));
         assert_eq!(mini.last_seen, None);
-        assert!(mini.can_host_runners());
         let boxx = snap.peers.iter().find(|p| p.node_id == "nBox").unwrap();
         assert_eq!(boxx.tags, vec!["tag:runner"]);
         assert_eq!(boxx.ssh_host_keys.len(), 1);
         assert!(mini.ssh_host_keys.is_empty());
         assert!(boxx.last_seen.is_some());
         let phone = snap.peers.iter().find(|p| p.node_id == "nPhone").unwrap();
-        assert!(!phone.can_host_runners());
+        assert_eq!(phone.os, "iOS");
     }
 
     #[test]

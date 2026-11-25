@@ -1,7 +1,6 @@
 import type { FleetEventKind } from "../bindings/FleetEventKind";
 import type { FleetMachineEvent } from "../bindings/FleetMachineEvent";
 import type { FleetView } from "../bindings/FleetView";
-import { allMachines } from "./nav";
 import type { Tone } from "./status";
 
 export const eventStyle: Record<FleetEventKind, { label: string; tone: Tone }> = {
@@ -26,7 +25,7 @@ export const HISTORY_PAGE_SIZE = 50;
 
 /** Inventory keys survive a tailnet node replacement; selection uses the current UI ID. */
 export function monitoringMachine(view: FleetView, key: string) {
-  return allMachines(view).find((m) => m.monitoring.machineKey === key);
+  return view.machines.find((m) => m.monitoring.machineKey === key);
 }
 
 /** Cursor IDs are fixed-width decimal strings, so they sort without numeric precision loss. */

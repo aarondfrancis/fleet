@@ -132,9 +132,12 @@ Windows:     C:\gh-runners\acme\runner-01
 
 ## Using the app
 
-Machines come from the tailnet. Each inventory host is matched to its tailnet machine (as
-`ssh -G` resolves its target) and listed with its runners: declared runners, legacy runners
+Machines are the inventory's hosts. Each one is matched to its tailnet machine (as `ssh -G`
+resolves its target) and listed with its runners: declared runners, legacy runners
 still present, runners pending decommission, and GitHub runners carrying its `host-*` label.
+A tailnet device outside the inventory is never listed, contacted or alerted on. **Add machine**
+in the sidebar lists those devices by name and shows the `[[hosts]]` entry to paste for each.
+Tailscale doesn't report a Windows machine's CPU, so check `platform` before you save.
 
 - **Check now** (overview) or **Check** (a machine) reads GitHub with `gh` and probes hosts over
   SSH (`tailscale ssh` for `ssh_transport = "tailscale"`). The app checks once at launch, then

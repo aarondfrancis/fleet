@@ -17,12 +17,11 @@ pub(super) fn endpoint_descriptions() -> Value {
         "GET /": "Capabilities, limits and semantics",
         "GET /v1/summary": "Fleet counts, GitHub and tailnet status; attention equals issues.length",
         "GET /v1/fleet": "Complete snapshot, including shared issues and all machine categories",
-        "GET /v1/machines": "Machine list; scope=all (default), fleet, or discovered",
+        "GET /v1/machines": "The inventory's machines, filtered by os, connection and q",
         "GET /v1/machines/{id}": "Machine by exact ID, inventory alias, or unambiguous name",
         "GET /v1/runners": "Runner list, filtered by machine, org, activity, label, or current-job repo",
         "GET /v1/runners/{key}": "Runner by exact key or unambiguous name; optional org",
         "GET /v1/queue": "Self-hosted queue filtered by org, repo and label; scope metadata stays fleet-wide",
-        "GET /v1/discovered": "Other machines and ignored tailnet peers",
         "GET /v1/desired": "Global plan plus per-host plans, runner status, blocked reasons and doctor checks; optional machine",
         "GET /v1/monitoring": format!("Current alerts and latest {EVENT_PAGE_SIZE} events; optional machine"),
         "GET /v1/pools": "runner-up central pools: place counts per pool, places and tart VMs; null without a coordinator",
@@ -170,7 +169,7 @@ fn document() -> Value {
         ("/v1/fleet", envelope(fleet), parameters::<NoQuery>(&mut components)),
         (
             "/v1/machines",
-            json!({ "allOf": [collection("machines", machine.clone()), object(json!({ "scope": { "enum": ["all", "fleet", "discovered"] } }))] }),
+            collection("machines", machine.clone()),
             parameters::<queries::MachineQuery>(&mut components),
         ),
         (
@@ -194,13 +193,6 @@ fn document() -> Value {
                 json!({ "queue": reference("QueueView"), "total": { "type": "integer" }, "nextCursor": { "type": ["string", "null"] } }),
             )),
             parameters::<queries::QueueQuery>(&mut components),
-        ),
-        (
-            "/v1/discovered",
-            envelope(object(
-                json!({ "otherMachines": array(reference("MachineView")), "ignored": array(reference("DiscoveredPeerView")) }),
-            )),
-            parameters::<NoQuery>(&mut components),
         ),
         (
             "/v1/desired",

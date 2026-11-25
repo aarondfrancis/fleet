@@ -3,9 +3,9 @@ import type { FleetView } from "../bindings/FleetView";
 import type { MachineView } from "../bindings/MachineView";
 import type { RunnerView } from "../bindings/RunnerView";
 import { formatClock } from "../lib/format";
-import { allMachines, selectionId, type Selection } from "../lib/nav";
+import { selectionId, type Selection } from "../lib/nav";
 import { machineNeedsChanges, runnerNeedsChanges } from "../lib/desired";
-import { busySince, hasWarning, machineDot, machineStatus, machineSummary, machineTooltip, runnerStatus, tailnetState } from "../lib/status";
+import { busySince, hasWarning, machineDot, machineSummary, machineTooltip, runnerStatus, tailnetState } from "../lib/status";
 import { movingRepos, retiringRepos } from "../lib/rollout";
 import { emitEvent } from "../lib/tauri";
 import { useUi } from "../store";
@@ -39,7 +39,7 @@ export function Sidebar({ view, filtered, selection }: { view: FleetView; filter
         </div>
       </div>
       <nav className="space-y-0.5 p-2" aria-label="Overview">
-        <Row sel={{ kind: "overview" }} selected={isSelected({ kind: "overview" })} icon={<Icon name="grid" size={16} />} label="Fleet overview" trailing={allMachines(view).length} />
+        <Row sel={{ kind: "overview" }} selected={isSelected({ kind: "overview" })} icon={<Icon name="grid" size={16} />} label="Fleet overview" trailing={view.machines.length} />
         <Row sel={{ kind: "queue" }} selected={isSelected({ kind: "queue" })} icon={<Icon name="queue" size={16} />} label="Queued jobs" trailing={view.queue.jobs.length} />
         {view.rollout.length > 0 && <>
           <Row sel={{ kind: "moving" }} selected={isSelected({ kind: "moving" })} icon={<Icon name="plan" size={16} />} label="Moving to central" trailing={movingRepos(view.rollout).length} />
@@ -62,22 +62,16 @@ export function Sidebar({ view, filtered, selection }: { view: FleetView; filter
       </div>
       <nav ref={scrollRef} className="scroll min-h-0 flex-1 px-2 pb-2" aria-label="Machines and runners">
         <Heading title="Machines" count={filtered.machines.length} />
-        {view.machines.length === 0 && !searching && <EmptyLine>{view.tailnet.available ? "Add runner machines to the inventory to see them here." : tailnetState(view.tailnet).text}</EmptyLine>}
+        {view.machines.length === 0 && !searching && <EmptyLine>{view.plan.inventoryError ? "The inventory couldn't be loaded. The overview says why." : "Add machines to the inventory to see them here."}</EmptyLine>}
         {filtered.machines.map((m) => <MachineRows key={m.id} m={m} open={searching || !collapsed.has(m.id)} searching={searching} isSelected={isSelected} />)}
         {filtered.unmatchedRunners.length > 0 && <>
           <Heading title="Not linked to a machine" count={filtered.unmatchedRunners.length} open={searching || open.unlinked} onToggle={() => setOpen("unlinked", !open.unlinked)} />
           {(searching || open.unlinked) && filtered.unmatchedRunners.map((r) => <RunnerRow key={r.key} r={r} isSelected={isSelected} />)}
         </>}
-        {filtered.otherMachines.length > 0 && <>
-          <Heading title="Other machines" count={filtered.otherMachines.length} open={searching || open.other} onToggle={() => setOpen("other", !open.other)} />
-          {(searching || open.other) && filtered.otherMachines.map((m) => {
-            const status = machineStatus(m.connection);
-            const sel: Selection = { kind: "machine", id: m.id };
-            return <Row key={m.id} sel={sel} selected={isSelected(sel)} icon={<StatusDot tone={status.tone} hollow={status.hollow} />} label={m.displayName} title={machineTooltip(m)} trailing={status.label} />;
-          })}
-        </>}
-        {filtered.ignored.length > 0 && <Row sel={{ kind: "ignored" }} selected={isSelected({ kind: "ignored" })} icon={<Icon name="eye-off" />} label="Ignored" trailing={filtered.ignored.length} />}
-        {searching && !filtered.machines.length && !filtered.otherMachines.length && !filtered.unmatchedRunners.length && !filtered.ignored.length && <EmptyLine>No machines or runners match “{query}”.</EmptyLine>}
+        {filtered.tailnetDevices.length > 0 && <div className="mt-2">
+          <Row sel={{ kind: "add-machine" }} selected={isSelected({ kind: "add-machine" })} icon={<Icon name="plus" />} label="Add machine" title="Tailnet devices that aren't in the inventory" trailing={filtered.tailnetDevices.length} />
+        </div>}
+        {searching && !filtered.machines.length && !filtered.unmatchedRunners.length && !filtered.tailnetDevices.length && <EmptyLine>No machines or runners match “{query}”.</EmptyLine>}
       </nav>
       <Footer view={view} />
     </aside>

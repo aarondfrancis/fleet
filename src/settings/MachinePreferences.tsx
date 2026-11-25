@@ -2,13 +2,12 @@ import { useState } from "react";
 import type { FleetView } from "../bindings/FleetView";
 import type { MachineView } from "../bindings/MachineView";
 import { Button, Card, EmptyLine } from "../components/ui";
-import { allMachines } from "../lib/nav";
 import { isLive } from "../lib/tauri";
 import { defaultMachineName, MachinePreferencesForm } from "../components/MachinePreferencesForm";
 import { CopyValue } from "../components/CopyValue";
 
 export function MachinePreferences({ view }: { view: FleetView }) {
-  const machines = allMachines(view);
+  const machines = view.machines;
   const editable = isLive(view);
   return (
     <div className="mt-3">

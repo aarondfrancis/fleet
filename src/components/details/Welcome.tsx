@@ -1,9 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import type { FleetView } from "../../bindings/FleetView";
-import { plural } from "../../lib/format";
-import { tailnetState } from "../../lib/status";
 import { commands, emitEvent, isTauri } from "../../lib/tauri";
 import { Button, Card, ErrorText } from "../ui";
+import { InventoryProblem } from "./shared";
 
 /** First run: no organization and no machines yet. */
 export function Welcome({ view }: { view: FleetView }) {
@@ -15,6 +14,7 @@ export function Welcome({ view }: { view: FleetView }) {
         Watch your self-hosted GitHub runners: which machines are up, which runners are connected, and what they're
         working on.
       </p>
+      <div className="text-left"><InventoryProblem view={view} /></div>
       <Card className="mt-6 px-5 py-4 text-left">
         <ol className="space-y-3 text-[12.5px]">
           <li>
@@ -24,9 +24,8 @@ export function Welcome({ view }: { view: FleetView }) {
           <li>
             <span className="font-medium">2. Describe your machines in inventory/fleet.toml.</span>{" "}
             <span className="text-ink-2">
-              {view.tailnet.available
-                ? `Machines come from your tailnet (${plural(view.otherMachines.length, "machine")} found so far); the inventory says which run runners.`
-                : tailnetState(view.tailnet).text}
+              Only machines in the inventory are shown and checked. Add machine lists your tailnet devices and the entry
+              for each one.
             </span>
           </li>
           <li>

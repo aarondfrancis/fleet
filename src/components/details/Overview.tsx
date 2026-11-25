@@ -3,14 +3,14 @@ import type { FleetIssueCategory } from "../../bindings/FleetIssueCategory";
 import type { FleetView } from "../../bindings/FleetView";
 import { useNow } from "../../hooks";
 import { plural, timeAgo } from "../../lib/format";
-import { allMachines, allRunners } from "../../lib/nav";
+import { allRunners } from "../../lib/nav";
 import { activityCounts } from "../../lib/status";
 import { emitEvent, isLive } from "../../lib/tauri";
 import { useUi } from "../../store";
 import { calloutSurface, Card, EmptyLine, Section, Stat, StatStrip } from "../ui";
 import { Icon } from "../icons";
 import { OperationCard } from "./changes";
-import { List, PageHeader, RunnerLine } from "./shared";
+import { InventoryProblem, List, PageHeader, RunnerLine } from "./shared";
 import { MachineTable } from "./MachineTable";
 import { QueueList } from "./QueueDetail";
 import { ActiveAlerts, EventTimeline, MonitoringError } from "./Monitoring";
@@ -21,7 +21,7 @@ import { Welcome } from "./Welcome";
 
 export function Overview({ view }: { view: FleetView }) {
   const s = view.summary;
-  const machines = allMachines(view);
+  const machines = view.machines;
   const runners = allRunners(view);
   const working = runners.filter((r) => r.activity.kind === "busy");
   const idle = activityCounts(runners).idle;
@@ -38,6 +38,7 @@ export function Overview({ view }: { view: FleetView }) {
         subtitle={`${plural(machines.length, "machine")} · ${plural(s.runners, "runner")}${orgs ? ` · ${orgs}` : ""}`}
       />
       <PlanLine view={view} />
+      <InventoryProblem view={view} />
       {view.plan.operation && <OperationCard op={view.plan.operation} />}
       <div className="mt-8"><StatStrip>
         <Stat label="Working" value={s.runnersBusy} tone="busy" sub={`of ${s.runners} runners`}>
@@ -59,7 +60,7 @@ export function Overview({ view }: { view: FleetView }) {
       {view.monitoring.alerts.length > 0 && <Section title="Active alerts" count={view.monitoring.alerts.length}>
         <ActiveAlerts alerts={view.monitoring.alerts} view={view} showMachine />
       </Section>}
-      <Attention issues={view.issues} />
+      <Attention issues={view.issues.filter((i) => i.id !== "inventory")} />
 
       <div className="grid grid-cols-1 gap-x-6 min-[1100px]:grid-cols-2">
         <Section title="Working now" count={working.length}>

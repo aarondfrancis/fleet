@@ -9,8 +9,10 @@
 //! - `runner_up`: runner-up central pools, read over SSH
 //! - `rollout`: repositories moving to the central pools, and their old runners
 //! - `local_api`: the read-only loopback HTTP API
+//! - `add_machine`: inventory entries for tailnet devices outside the inventory
 //! - `demo`, `demo_desired`: a fictional dataset run through the same `derive`
 
+pub mod add_machine;
 mod atomic_write;
 mod cli;
 pub mod demo;

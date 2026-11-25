@@ -155,7 +155,6 @@ async fn views_carry_no_secrets() {
             "/v1/machines",
             "/v1/runners",
             "/v1/queue",
-            "/v1/discovered",
             "/v1/desired",
             "/v1/monitoring",
             "/v1/pools",
@@ -189,8 +188,23 @@ async fn lookup_prefers_exact_identity_and_reports_ambiguity() {
                 async move { Ok(peers) }
             }),
     );
+    let host = |id: &str| {
+        format!(
+            "[[hosts]]\nid = \"{id}\"\nplatform = \"darwin-arm64\"\nssh = \"{id}\"\nroot = \"~/gh-runners/acme\"\nservice_mode = \"launchagent\"\n"
+        )
+    };
+    let inventory = dir.path().join("fleet.toml");
+    std::fs::write(
+        &inventory,
+        format!(
+            "[organization]\nname = \"acme\"\nurl = \"https://github.com/acme\"\n\n{}{}",
+            host("alpha"),
+            host("beta")
+        ),
+    )
+    .unwrap();
     engine
-        .set_inventory_path(Some(dir.path().join("absent.toml").display().to_string()))
+        .set_inventory_path(Some(inventory.display().to_string()))
         .unwrap();
     engine.poll_tailscale().await;
     engine.set_machine_preferences("ts:alpha", "ts:beta", "").unwrap();
@@ -204,6 +218,9 @@ async fn lookup_prefers_exact_identity_and_reports_ambiguity() {
     assert_eq!(status, StatusCode::CONFLICT);
     assert_eq!(found["code"], "ambiguous_identifier");
     assert_eq!(found["candidates"], json!(["ts:alpha", "ts:beta"]));
+    engine
+        .set_inventory_path(Some(dir.path().join("absent.toml").display().to_string()))
+        .unwrap();
     let (_, summary) = call(&engine, get("/v1/summary")).await;
     let (_, issues) = call(&engine, get("/v1/issues")).await;
     assert_eq!(summary["summary"]["attention"], issues["total"]);
@@ -230,7 +247,6 @@ fn runner_keys_precede_names_and_org_disambiguates_names() {
     second.name = "shared".into();
     second.org = Some("second".into());
     view.machines.clear();
-    view.other_machines.clear();
     view.unmatched_runners = vec![first, second];
     assert_eq!(
         super::queries::resolve_runner(&view, "gh:second:2", None)
@@ -256,16 +272,17 @@ fn runner_keys_precede_names_and_org_disambiguates_names() {
 async fn metadata_scopes_filters_and_host_plans_are_complete() {
     let (_dir, engine) = engine(true);
     let (_, all) = call(&engine, get("/v1/machines")).await;
-    assert_eq!(all["machines"].as_array().unwrap().len(), 7);
-    let (_, fleet) = call(&engine, get("/v1/machines?scope=fleet")).await;
-    let (_, others) = call(&engine, get("/v1/machines?scope=discovered")).await;
-    assert_eq!((fleet["total"].as_u64(), others["total"].as_u64()), (Some(5), Some(2)));
-    for path in [
-        "/v1/machines/inv:studio",
-        "/v1/runners/gh:acme-demo:101",
-        "/v1/discovered",
-        "/v1/desired",
-    ] {
+    assert_eq!(
+        (all["machines"].as_array().unwrap().len(), all["total"].as_u64()),
+        (5, Some(5))
+    );
+    // Machines are the inventory's hosts only; the discovered scope and endpoint are gone.
+    assert_eq!(
+        call(&engine, get("/v1/machines?scope=discovered")).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(call(&engine, get("/v1/discovered")).await.0, StatusCode::NOT_FOUND);
+    for path in ["/v1/machines/inv:studio", "/v1/runners/gh:acme-demo:101", "/v1/desired"] {
         let (status, body) = call(&engine, get(path)).await;
         assert_eq!(status, StatusCode::OK, "{path}: {body}");
         assert_eq!(body["source"], "demo", "{path}");
@@ -274,7 +291,7 @@ async fn metadata_scopes_filters_and_host_plans_are_complete() {
     }
     let (_, desired) = call(&engine, get("/v1/desired?machine=inv:studio")).await;
     assert_eq!(desired["hosts"].as_array().unwrap().len(), 1);
-    let expected = fleet["machines"]
+    let expected = all["machines"]
         .as_array()
         .unwrap()
         .iter()

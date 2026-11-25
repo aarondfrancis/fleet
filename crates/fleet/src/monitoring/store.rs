@@ -2,7 +2,7 @@
 
 use super::state::{MachineState, target};
 use super::{FleetEventKind, FleetMachineEvent, FleetMachineMonitoring};
-use crate::model::{DataSource, FleetView, MachineConnection, MachineView, tailnet_machine_key};
+use crate::model::{DataSource, FleetView, MachineConnection, MachineView, is_tailnet_machine_key};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -94,17 +94,14 @@ impl MonitorStore {
         let eligible: BTreeSet<_> = view
             .machines
             .iter()
-            .chain(&view.other_machines)
             .filter(|m| !matches!(m.connection, MachineConnection::Disabled))
             .flat_map(|m| [m.preferences_key(), m.id.clone()])
             .collect();
         let disabled: BTreeSet<_> = view
             .machines
             .iter()
-            .chain(&view.other_machines)
             .filter(|m| matches!(m.connection, MachineConnection::Disabled))
             .flat_map(|m| [m.preferences_key(), m.id.clone()])
-            .chain(view.ignored.iter().map(|p| tailnet_machine_key(&p.peer.node_id)))
             .collect();
         // Absence is authoritative only with a current discovery and a loaded inventory.
         // Failed or pending inputs can temporarily hide machines without removing them.
@@ -117,7 +114,7 @@ impl MonitorStore {
             self.journal.notification_retry_at = None;
             changed = true;
         }
-        for machine in view.machines.iter().chain(&view.other_machines) {
+        for machine in &view.machines {
             if matches!(machine.connection, MachineConnection::Disabled) {
                 continue;
             }
@@ -159,6 +156,16 @@ impl MonitorStore {
                 changed = true;
             }
             self.journal.machines.insert(key, state);
+        }
+        if complete {
+            // Earlier versions also watched tailnet devices outside the inventory, under their
+            // tailnet key. Only inventory machines are monitored now, so that history leaves.
+            let outside =
+                |key: &String| is_tailnet_machine_key(key) && !eligible.contains(key) && !disabled.contains(key);
+            let before = (self.journal.machines.len(), self.journal.events.len());
+            self.journal.machines.retain(|key, _| !outside(key));
+            self.journal.events.retain(|e| !outside(&e.machine_key));
+            changed |= before != (self.journal.machines.len(), self.journal.events.len());
         }
         let cutoff = now - EVENT_RETENTION;
         self.journal.events.retain(|e| e.at >= cutoff);
@@ -288,7 +295,7 @@ impl MonitorStore {
         view.monitoring.storage_error.clone_from(&self.storage_error);
         view.monitoring.events = self.events(None, None, now);
         view.monitoring.alerts.clear();
-        for machine in view.machines.iter_mut().chain(&mut view.other_machines) {
+        for machine in &mut view.machines {
             let key = machine.preferences_key();
             let state = self
                 .journal

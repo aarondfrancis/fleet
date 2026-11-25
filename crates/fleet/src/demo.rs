@@ -4,7 +4,7 @@
 //! is marked `DataSource::Demo` and the UI labels it as demo data.
 
 use crate::desired::model::LocalRunner;
-use crate::machine::{DiskStats, MachineReport, MachineTarget, OsFamily};
+use crate::machine::{DiskStats, MachineReport, OsFamily};
 use chrono::{DateTime, Duration, Utc};
 
 use crate::model::*;
@@ -24,11 +24,6 @@ pub fn dataset(now: DateTime<Utc>) -> (AppConfig, Observations) {
             added_at: added,
             auth: OrgAuth::GhCli,
             kind: Default::default(),
-        }],
-        ignored_peers: vec![IgnoredPeer {
-            tailscale_node_id: "nNas".into(),
-            name: "home-nas".into(),
-            ignored_at: now - Duration::days(3),
         }],
         demo_mode: true,
         local_api: true,
@@ -208,7 +203,7 @@ pub fn dataset(now: DateTime<Utc>) -> (AppConfig, Observations) {
         obs.machines.insert(
             inventory_machine_key(id),
             MachineObservation {
-                target: MachineTarget::Inventory(host.clone()),
+                target: host.clone(),
                 report: Some(Timed::new(ago(age), report(os, cpu, memory, disk, runners))),
                 last_error: error.map(|message| Timed::new(ago(5), message.into())),
             },
@@ -217,7 +212,7 @@ pub fn dataset(now: DateTime<Utc>) -> (AppConfig, Observations) {
     obs.machines.insert(
         inventory_machine_key("mac-mini-03"),
         MachineObservation {
-            target: MachineTarget::Inventory(inventory.find_host("mac-mini-03").expect("demo host").clone()),
+            target: inventory.find_host("mac-mini-03").expect("demo host").clone(),
             report: None,
             last_error: Some(Timed::new(
                 ago(5),

@@ -116,7 +116,6 @@ fn alert_issues(view: &FleetView) -> Vec<FleetIssue> {
             issue.machine_id = view
                 .machines
                 .iter()
-                .chain(&view.other_machines)
                 .find(|m| m.preferences_key() == alert.machine_key || m.id == alert.machine_key)
                 .map(|m| m.id.clone());
             issue.stale = alert.stale;
@@ -183,7 +182,6 @@ fn fleet_issues(view: &FleetView) -> Vec<FleetIssue> {
 fn machine_issues(view: &FleetView) -> Vec<FleetIssue> {
     view.machines
         .iter()
-        .chain(&view.other_machines)
         .flat_map(|machine| {
             let mut issues = issues_for_machine(machine);
             for issue in &mut issues {
@@ -295,7 +293,6 @@ fn issues_for_machine(machine: &MachineView) -> Vec<FleetIssue> {
 fn runner_issues(view: &FleetView) -> Vec<FleetIssue> {
     view.machines
         .iter()
-        .chain(&view.other_machines)
         .flat_map(|m| &m.runners)
         .chain(&view.unmatched_runners)
         .filter(|runner| !runner.warnings.is_empty())
@@ -415,7 +412,6 @@ mod tests {
             DataSource::Live,
         );
         view.machines.truncate(1);
-        view.other_machines.clear();
         view.monitoring = FleetMonitoring::default();
         let machine = &mut view.machines[0];
         machine.desired = None;

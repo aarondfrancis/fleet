@@ -4,10 +4,11 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
+use fleet::desired::model::Host;
 use fleet::desired::remote::RemoteError;
 use fleet::engine::desired::{DesiredIo, SshTransportIdentity};
 use fleet::engine::{Engine, MemorySecrets};
-use fleet::machine::{MachineReport, MachineSource, MachineTarget, parse_inspection};
+use fleet::machine::{MachineReport, MachineSource, parse_inspection};
 use fleet::model::{MachineConnection, TailnetPeer, TailnetSnapshot};
 
 const INVENTORY: &str = r#"
@@ -32,16 +33,13 @@ struct FakeMachine {
 }
 
 impl MachineSource for FakeMachine {
-    fn inspect(&self, target: &MachineTarget) -> Result<MachineReport, RemoteError> {
-        self.calls
-            .lock()
-            .unwrap()
-            .push(target.host().unwrap().ssh_target.clone().unwrap());
+    fn inspect(&self, host: &Host) -> Result<MachineReport, RemoteError> {
+        self.calls.lock().unwrap().push(host.ssh_target.clone().unwrap());
         if self.failures.lock().unwrap().pop_front().unwrap_or(false) {
             return Err(RemoteError("SSH permission denied.".into()));
         }
         parse_inspection(
-            target,
+            host,
             "RFM\tos\tmacos\nRFM\tcpu\t42\nRFM\tmemory_total\t2000\nRFM\tmemory_available\t1000\nRFM_END\nRFM_RUNNERS\nRF1\tmini-01\t/Users/ci/gh-runners/test/runner-01\ttrue\tactive\t2.329.0\n",
         )
     }
@@ -65,17 +63,31 @@ fn fixture(source: Arc<dyn MachineSource>, inventory: &str) -> (tempfile::TempDi
         })
         .with_tailscale_source(|| async {
             Ok(TailnetSnapshot {
-                peers: vec![TailnetPeer {
-                    node_id: "nMini".into(),
-                    hostname: "mini".into(),
-                    dns_name: Some("mini.demo.ts.net".into()),
-                    os: "macOS".into(),
-                    ips: vec![],
-                    online: true,
-                    last_seen: None,
-                    tags: vec![],
-                    ssh_host_keys: vec![],
-                }],
+                peers: vec![
+                    TailnetPeer {
+                        node_id: "nMini".into(),
+                        hostname: "mini".into(),
+                        dns_name: Some("mini.demo.ts.net".into()),
+                        os: "macOS".into(),
+                        ips: vec![],
+                        online: true,
+                        last_seen: None,
+                        tags: vec![],
+                        ssh_host_keys: vec![],
+                    },
+                    // A household computer on the tailnet, outside the inventory.
+                    TailnetPeer {
+                        node_id: "nFamily".into(),
+                        hostname: "family-pc".into(),
+                        dns_name: Some("family-pc.demo.ts.net".into()),
+                        os: "windows".into(),
+                        ips: vec![],
+                        online: true,
+                        last_seen: None,
+                        tags: vec![],
+                        ssh_host_keys: vec!["ssh-ed25519 fake".into()],
+                    },
+                ],
                 ..Default::default()
             })
         });
@@ -154,7 +166,7 @@ async fn refreshes_coalesce_and_limit_concurrent_ssh_sessions() {
         release: (Mutex<bool>, Condvar),
     }
     impl MachineSource for BlockingSource {
-        fn inspect(&self, target: &MachineTarget) -> Result<MachineReport, RemoteError> {
+        fn inspect(&self, host: &Host) -> Result<MachineReport, RemoteError> {
             self.calls.fetch_add(1, Ordering::SeqCst);
             let active = self.active.fetch_add(1, Ordering::SeqCst) + 1;
             self.peak.fetch_max(active, Ordering::SeqCst);
@@ -165,9 +177,9 @@ async fn refreshes_coalesce_and_limit_concurrent_ssh_sessions() {
                 .unwrap();
             self.active.fetch_sub(1, Ordering::SeqCst);
             assert!(*released, "test must release the SSH reads");
-            let name = &target.host().unwrap().runners[0].name;
+            let name = &host.runners[0].name;
             parse_inspection(
-                target,
+                host,
                 &format!("RFM\tos\tmacos\nRFM_END\nRFM_RUNNERS\nRF1\t{name}\t/home/ci/runner\tfalse\tmissing\t\n"),
             )
         }
@@ -259,20 +271,29 @@ async fn personal_labels_persist_across_restart_and_tailnet_discovery_without_ch
 }
 
 #[tokio::test]
-async fn personal_labels_follow_other_peers_and_reject_invalid_edits() {
+async fn tailnet_devices_outside_the_inventory_are_never_contacted_listed_or_labelled() {
     let fake = Arc::new(FakeMachine::default());
-    let (_dir, engine) = fixture(fake, &INVENTORY.replace("mini", "different"));
+    let (_dir, engine) = fixture(fake.clone(), INVENTORY);
     engine.poll_tailscale().await;
-    assert_eq!(engine.view().other_machines.len(), 1);
-    engine
-        .set_machine_preferences("ts:nMini", "Guest room", "Bottom shelf")
-        .unwrap();
-    let machine = engine.view().other_machines.remove(0);
+    engine.poll_machines().await;
+    engine.poll_machines().await;
+    assert_eq!(*fake.calls.lock().unwrap(), ["mini-alias", "mini-alias"]);
+    let view = engine.view();
     assert_eq!(
-        (machine.display_name.as_str(), machine.description.as_deref()),
-        ("Guest room", Some("Bottom shelf"))
+        view.machines.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(),
+        ["ts:nMini"]
+    );
+    assert_eq!(
+        view.tailnet_devices.iter().map(|d| d.name.as_str()).collect::<Vec<_>>(),
+        ["family-pc"]
+    );
+    assert!(
+        !serde_json::to_string(&view.issues).unwrap().contains("family-pc"),
+        "{:?}",
+        view.issues
     );
     let saved = engine.config();
+    assert!(engine.set_machine_preferences("ts:nFamily", "Den", "").is_err());
     assert!(engine.set_machine_preferences("ts:gone", "Name", "").is_err());
     assert!(
         engine
@@ -280,6 +301,28 @@ async fn personal_labels_follow_other_peers_and_reject_invalid_edits() {
             .is_err()
     );
     assert_eq!(engine.config(), saved);
+}
+
+#[test]
+fn settings_saved_with_the_removed_ignore_list_still_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("config.json");
+    let saved = serde_json::json!({
+        "orgs": [],
+        "ignoredPeers": [{ "tailscaleNodeId": "nFamily", "name": "family-pc", "ignoredAt": "2026-11-20T12:00:00Z" }],
+        "machinePreferences": { "inv:mini": { "displayName": "Office Mini", "description": null } },
+        "desktopNotifications": true,
+    });
+    std::fs::write(&path, saved.to_string()).unwrap();
+    let engine = Engine::load(&path, Arc::new(MemorySecrets::default())).unwrap();
+    let config = engine.config();
+    assert!(config.desktop_notifications);
+    assert_eq!(
+        config.machine_preferences["inv:mini"].display_name.as_deref(),
+        Some("Office Mini")
+    );
+    engine.set_local_api(false).unwrap();
+    assert!(!std::fs::read_to_string(&path).unwrap().contains("ignoredPeers"));
 }
 
 #[test]
@@ -316,7 +359,7 @@ async fn http_refresh_waits_for_polling_then_collects_its_own_fresh_sample() {
         released: (Mutex<usize>, Condvar),
     }
     impl MachineSource for Gated {
-        fn inspect(&self, target: &MachineTarget) -> Result<MachineReport, RemoteError> {
+        fn inspect(&self, host: &Host) -> Result<MachineReport, RemoteError> {
             let call = self.count.fetch_add(1, Ordering::SeqCst) + 1;
             self.started.blocking_send(call).unwrap();
             let (lock, ready) = &self.released;
@@ -326,7 +369,7 @@ async fn http_refresh_waits_for_polling_then_collects_its_own_fresh_sample() {
             drop(release);
             assert!(!timeout.timed_out(), "test failed to release SSH sample {call}");
             parse_inspection(
-                target,
+                host,
                 "RFM\tos\tmacos\nRFM\tcpu\t42\nRFM_END\nRFM_RUNNERS\nRF1\tmini-01\t/home/ci/runner\ttrue\tactive\t2.330.0\n",
             )
         }

@@ -30,7 +30,7 @@ function Main() {
   const filtered = useMemo(() => (view ? filterNavView(view, query) : undefined), [view, query]);
   const searching = !!query.trim();
   const nav = useMemo(
-    () => (filtered ? flattenNav(filtered, searching ? new Set() : collapsed, searching ? { unlinked: true, other: true } : open) : []),
+    () => (filtered ? flattenNav(filtered, searching ? new Set() : collapsed, searching ? { unlinked: true } : open) : []),
     [filtered, searching, collapsed, open],
   );
   // Machines and runners come and go; a vanished selection shows the overview.

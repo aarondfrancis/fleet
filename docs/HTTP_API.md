@@ -23,14 +23,13 @@ host configuration.
 | Route | Filters and result |
 | --- | --- |
 | `GET /` | Capabilities, limits and semantics |
-| `GET /v1/fleet` | Complete FleetView, including `otherMachines` and `issues` |
+| `GET /v1/fleet` | Complete FleetView, including `issues` and `tailnetDevices` |
 | `GET /v1/summary` | Summary, organization and tailnet status |
-| `GET /v1/machines` | `scope=all` (default), `fleet` or `discovered`; `os`, `connection`, `q`, `after`, `limit` |
+| `GET /v1/machines` | The inventory's machines; `os`, `connection`, `q`, `after`, `limit` |
 | `GET /v1/machines/{id}` | One machine |
 | `GET /v1/runners` | `machine`, `org`, `activity`, `label`, `repo`, `after`, `limit` |
 | `GET /v1/runners/{key}` | One runner; optional `org` |
 | `GET /v1/queue` | `org`, `repo`, `label`, `after`, `limit` |
-| `GET /v1/discovered` | Other machines and ignored machines |
 | `GET /v1/desired` | Global `plan` and `hosts`; optional `machine` |
 | `GET /v1/monitoring` | Alerts and latest 50 events; optional `machine` |
 | `GET /v1/events` | History: `machine` or `machineKey`, `before`, `limit` ([History](#history)) |
@@ -75,8 +74,11 @@ Unknown query fields and invalid enum values are errors. The enums are:
 matches observed GitHub labels; `repo` matches the runner's linked current job, not repository
 access permissions. GitHub data freshness is visible on each runner.
 
-`/v1/machines` includes fleet machines and other discovered machines by default; ignored
-machines are in `/v1/discovered`. Summary machine counts refer to fleet machines. Queue scope
+Machines are the inventory's hosts. A tailnet device outside the inventory is never a machine,
+is never contacted over SSH and never raises an alert. `tailnetDevices` in `/v1/fleet` lists
+such devices by name, each with the `[[hosts]]` entry that would add it. The `otherMachines`
+and `ignored` fields, `GET /v1/discovered` and the `scope` filter of `/v1/machines` were
+removed. A request that still sends `scope` gets 400, and `/v1/discovered` gets 404. Queue scope
 metadata (`complete`, `asOf`, `otherQueued`) stays fleet-wide when jobs are filtered.
 
 `/v1/desired` returns each selected host's declaration, plan, blocked reasons, errors, check

@@ -6,8 +6,8 @@ fn inventory_host(id: &str) -> Host {
     crate::demo_desired::inventory().find_host(id).unwrap().clone()
 }
 
-fn host(id: &str) -> MachineTarget {
-    MachineTarget::Inventory(inventory_host(id))
+fn host(id: &str) -> Host {
+    inventory_host(id)
 }
 
 const MAC_HEALTH: &str = "RFM\tos\tmacos\nRFM\tos_version\t15.6\nRFM\tcores\t12\nRFM\tcpu\t23.50\nRFM\tload\t1.5 2.0 0.8\nRFM\tmemory_total\t24000000000\nRFM\tmemory_available\t8000000000\nRFM\tuptime\t86400\nRFM\tdisk\t/\t500000000000\t300000000000\nRFM_END\nRFM_RUNNERS\n";
@@ -84,11 +84,7 @@ fn machines_without_inventory_runners_can_report_health() {
     for (id, os, runner_output) in [("mac-mini-02", "macos", ""), ("win-builder", "windows", "[]")] {
         let mut host = inventory_host(id);
         host.runners.clear();
-        let report = parse_inspection(
-            &MachineTarget::Inventory(host),
-            &format!("RFM\tos\t{os}\nRFM_END\nRFM_RUNNERS\n{runner_output}"),
-        )
-        .unwrap();
+        let report = parse_inspection(&host, &format!("RFM\tos\t{os}\nRFM_END\nRFM_RUNNERS\n{runner_output}")).unwrap();
         assert!(report.runners.is_empty());
     }
 }
@@ -106,7 +102,7 @@ fn windows_crlf_json_and_unicode_are_preserved() {
 fn linux_and_missing_runner_configuration_are_readable() {
     let mut linux = inventory_host("build-linux-01");
     linux.runners.truncate(1);
-    let linux = MachineTarget::Inventory(linux);
+
     let output = format!(
         "{}RF1\tlinux-01-a\t/home/builder/runners/a\tfalse\tmissing\t\n",
         MAC_HEALTH.replace("macos", "linux")

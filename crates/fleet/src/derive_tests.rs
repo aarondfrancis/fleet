@@ -436,8 +436,6 @@ fn discovery_and_demo_cover_current_stale_offline_and_failed_ssh() {
     assert!(kinds.iter().any(|c| matches!(c, MachineConnection::Stale { .. })));
     assert!(kinds.iter().any(|c| matches!(c, MachineConnection::Offline { .. })));
     assert!(kinds.iter().any(|c| matches!(c, MachineConnection::Error { .. })));
-    assert_eq!(view.other_machines.len(), 2);
-    assert_eq!(view.ignored.len(), 1);
     assert_eq!(view.unmatched_runners.len(), 1);
     assert_eq!(view.queue.jobs.len(), 2);
     assert!(view.machines.iter().all(|m| m.desired.is_some()));
@@ -446,7 +444,11 @@ fn discovery_and_demo_cover_current_stale_offline_and_failed_ssh() {
         names,
         ["build-linux-01", "mac-mini-02", "mac-mini-03", "studio", "win-builder"]
     );
-    assert!(!view.other_machines.iter().any(|m| m.display_name == "iphone"));
+    // Peers no inventory host claims are only offered to Add machine; a phone fits no platform.
+    let devices: Vec<_> = view.tailnet_devices.iter().map(|d| d.name.as_str()).collect();
+    assert_eq!(devices, ["dev-laptop", "home-nas", "spare-ubuntu"]);
+    let issues = serde_json::to_string(&view.issues).unwrap();
+    assert!(devices.iter().all(|name| !issues.contains(name)), "{issues}");
 }
 
 #[test]
@@ -553,7 +555,7 @@ runners = [{ name = "second-01", directory = "runner-01" }]
         .map(|m| (m.id.as_str(), m.display_name.as_str()))
         .collect();
     assert_eq!(identities, [("inv:mini", "mini"), ("inv:second", "second")]);
-    assert!(view.other_machines.is_empty());
+    assert!(!view.tailnet_devices.iter().any(|d| d.node_id == "nMini"));
     for machine in &view.machines {
         let MachineConnection::Error { detail } = &machine.connection else {
             panic!("conflict must be an error")

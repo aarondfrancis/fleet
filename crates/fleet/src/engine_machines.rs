@@ -6,7 +6,7 @@ use chrono::Utc;
 use futures::{StreamExt, stream};
 
 use super::{Engine, EngineError};
-use crate::machine::{MachineSource, MachineTarget};
+use crate::machine::MachineSource;
 use crate::model::{MachineObservation, MachinePreferences, Timed, inventory_machine_key};
 use crate::sync::RwLockExt;
 
@@ -31,12 +31,10 @@ impl Engine {
             ));
         }
         let view = self.view();
-        let machine = view
-            .machines
-            .into_iter()
-            .chain(view.other_machines)
-            .find(|m| m.id == id)
-            .ok_or_else(|| EngineError::NotFound("This machine is no longer listed. Refresh and try again.".into()))?;
+        let machine =
+            view.machines.into_iter().find(|m| m.id == id).ok_or_else(|| {
+                EngineError::NotFound("This machine is no longer listed. Refresh and try again.".into())
+            })?;
         let key = machine.preferences_key();
         let preferences = MachinePreferences {
             display_name: (!display_name.is_empty()).then(|| display_name.to_string()),
@@ -59,7 +57,7 @@ impl Engine {
         self
     }
 
-    /// Read health and runner state, with at most four concurrent SSH sessions.
+    /// Read health and runner state of enabled inventory hosts, with at most four concurrent SSH sessions.
     /// Concurrent refresh requests coalesce; failures preserve the last good data.
     pub async fn poll_machines(&self) {
         let Ok(_poll) = self.machine_poll.try_lock() else {
@@ -86,18 +84,11 @@ impl Engine {
         let targets = view
             .machines
             .into_iter()
-            .chain(view.other_machines)
             .filter(|m| machine.is_none_or(|id| m.id == id || m.preferences_key() == id))
             .filter(|m| m.tailnet.as_ref().is_none_or(|p| p.online))
-            .filter_map(|m| {
-                if let Some(d) = m.desired {
-                    d.host
-                        .enabled
-                        .then(|| (inventory_machine_key(&d.host.id), MachineTarget::Inventory(d.host)))
-                } else {
-                    m.tailnet.map(|p| (m.id, MachineTarget::discovered(&p)))
-                }
-            })
+            .filter_map(|m| m.desired.map(|d| d.host))
+            .filter(|host| host.enabled)
+            .map(|host| (inventory_machine_key(&host.id), host))
             .collect::<Vec<_>>();
         let source = &self.machine_source;
         let mut reads = stream::iter(targets.into_iter().map(|(id, target)| {

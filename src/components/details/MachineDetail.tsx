@@ -1,4 +1,3 @@
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FleetView } from "../../bindings/FleetView";
 import type { MachineView } from "../../bindings/MachineView";
@@ -6,9 +5,8 @@ import { useNow } from "../../hooks";
 import { operationRunning, requestTargetsMachine } from "../../lib/desired";
 import { timeAgo } from "../../lib/format";
 import { activityCounts, machineStatus } from "../../lib/status";
-import { commands, isLive } from "../../lib/tauri";
-import { useUi } from "../../store";
-import { Button, Callout, Card, ErrorText, Pill, Section } from "../ui";
+import { isLive } from "../../lib/tauri";
+import { Button, Callout, Card, Pill, Section } from "../ui";
 import { Icon } from "../icons";
 import { OperationCard, useChange } from "./changes";
 import { ChangePanel } from "./ReviewCard";
@@ -52,7 +50,6 @@ export function MachineDetail({ machine: m, view }: { machine: MachineView; view
           {live && !editing && <Button small variant="ghost" aria-label={`Edit ${m.displayName}`} onClick={() => setEditing(true)}>Edit…</Button>}
         </>}
         subtitle={subtitle}
-        actions={live && <IgnoreMachine m={m} view={view} />}
       />
       {editing && live ? <Card className="mt-4 px-4 py-3">
         <p className="text-[12px] text-ink-2">Personal name and description, saved only on this Mac.</p>
@@ -128,21 +125,3 @@ function ConnectionNotice({ m }: { m: MachineView }) {
   }
 }
 
-/** Other tailnet machines can be hidden from the dashboard. */
-function IgnoreMachine({ m, view }: { m: MachineView; view: FleetView }) {
-  const select = useUi((s) => s.select);
-  const tailnet = m.tailnet;
-  const ignore = useMutation({
-    mutationFn: (nodeId: string) => commands.ignorePeer(nodeId),
-    onSuccess: () => select({ kind: "overview" }),
-  });
-  if (!tailnet || !view.otherMachines.some((x) => x.id === m.id)) return null;
-  return (
-    <>
-      {ignore.isError && <ErrorText error={ignore.error} />}
-      <Button small variant="ghost" disabled={ignore.isPending} onClick={() => ignore.mutate(tailnet.nodeId)}>
-        Ignore
-      </Button>
-    </>
-  );
-}

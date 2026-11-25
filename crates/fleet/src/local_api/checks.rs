@@ -245,12 +245,7 @@ async fn run(engine: Arc<Engine>, request: CheckRequest, host: Option<String>) -
             if request.machine.is_none() {
                 errors.extend(view.orgs.iter().filter_map(|org| org.error.clone()));
             }
-            for machine in view
-                .machines
-                .iter()
-                .chain(&view.other_machines)
-                .filter(|m| selected.is_none_or(|s| s.id == m.id))
-            {
+            for machine in view.machines.iter().filter(|m| selected.is_none_or(|s| s.id == m.id)) {
                 match &machine.connection {
                     MachineConnection::Error { detail } => errors.push(format!("{}: {detail}", machine.id)),
                     MachineConnection::Stale { reason, .. } => errors.push(format!("{}: {reason}", machine.id)),

@@ -40,7 +40,7 @@ async function updateConfig(cmd: string, args?: Record<string, unknown>): Promis
 export const commands = {
   getFleet: (): Promise<FleetView> => (isTauri ? invoke("get_fleet") : Promise.resolve(previewFleet())),
   getConfig: (): Promise<AppConfig> =>
-    isTauri ? invoke("get_config") : Promise.resolve({ orgs: [], ignoredPeers: [], machinePreferences: {}, demoMode: true, localApi: false, desktopNotifications: false, inventoryPath: null }),
+    isTauri ? invoke("get_config") : Promise.resolve({ orgs: [], machinePreferences: {}, demoMode: true, localApi: false, desktopNotifications: false, inventoryPath: null }),
   refreshNow: () => invoke<void>("refresh_now"),
   addOrg: (login: string, auth: OrgAuth, token: string | null, repoScope: RepoScope) =>
     updateConfig("add_org", { login, auth, token, repoScope }),
@@ -52,8 +52,6 @@ export const commands = {
   updateOrgToken: (login: string, token: string) => updateConfig("update_org_token", { login, token }),
   setOrgScope: (login: string, repoScope: RepoScope) => updateConfig("set_org_scope", { login, repoScope }),
   removeOrg: (login: string) => updateConfig("remove_org", { login }),
-  ignorePeer: (nodeId: string) => updateConfig("ignore_peer", { nodeId }),
-  unignorePeer: (nodeId: string) => updateConfig("unignore_peer", { nodeId }),
   setMachinePreferences: (id: string, displayName: string, description: string) =>
     updateConfig("set_machine_preferences", { id, displayName, description }),
   setDemoMode: (on: boolean) => updateConfig("set_demo_mode", { on }),

@@ -634,7 +634,7 @@
         ],
         "events": [
           {
-            "id": "00000000000000000010",
+            "id": "00000000000000000008",
             "machineKey": "inv:mac-mini-02",
             "machineName": "mac-mini-02",
             "at": "2026-10-03T11:48:00Z",
@@ -1089,7 +1089,7 @@
         "alerts": [],
         "events": [
           {
-            "id": "00000000000000000009",
+            "id": "00000000000000000007",
             "machineKey": "inv:studio",
             "machineName": "studio",
             "at": "2026-10-03T11:23:00Z",
@@ -1097,7 +1097,7 @@
             "detail": "studio-1: inactive → running."
           },
           {
-            "id": "00000000000000000008",
+            "id": "00000000000000000006",
             "machineKey": "inv:studio",
             "machineName": "studio",
             "at": "2026-10-03T11:22:00Z",
@@ -1714,98 +1714,6 @@
       }
     }
   ],
-  "otherMachines": [
-    {
-      "id": "ts:nLaptop",
-      "displayName": "dev-laptop",
-      "description": null,
-      "host": "dev-laptop.demo.ts.net",
-      "os": "macos",
-      "osVersion": null,
-      "tailnet": {
-        "nodeId": "nLaptop",
-        "hostname": "dev-laptop",
-        "dnsName": "dev-laptop.demo.ts.net",
-        "os": "macOS",
-        "ips": [
-          "100.64.0.0"
-        ],
-        "online": true,
-        "lastSeen": null,
-        "tags": [],
-        "sshHostKeys": []
-      },
-      "connection": {
-        "kind": "pending"
-      },
-      "health": null,
-      "diagnostics": null,
-      "monitoring": {
-        "machineKey": "ts:nLaptop",
-        "maintenanceUntil": null,
-        "alerts": [],
-        "events": [
-          {
-            "id": "00000000000000000006",
-            "machineKey": "ts:nLaptop",
-            "machineName": "dev-laptop",
-            "at": "2026-10-03T10:00:00Z",
-            "kind": "monitoringStarted",
-            "detail": "Started observing this machine. Earlier events are not known."
-          }
-        ]
-      },
-      "runners": [],
-      "warnings": [],
-      "desired": null
-    },
-    {
-      "id": "ts:nSpare",
-      "displayName": "spare-ubuntu",
-      "description": null,
-      "host": "spare-ubuntu.demo.ts.net",
-      "os": "linux",
-      "osVersion": null,
-      "tailnet": {
-        "nodeId": "nSpare",
-        "hostname": "spare-ubuntu",
-        "dnsName": "spare-ubuntu.demo.ts.net",
-        "os": "linux",
-        "ips": [
-          "100.64.0.0"
-        ],
-        "online": true,
-        "lastSeen": null,
-        "tags": [],
-        "sshHostKeys": [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoHostKeyForPreviewOnly"
-        ]
-      },
-      "connection": {
-        "kind": "pending"
-      },
-      "health": null,
-      "diagnostics": null,
-      "monitoring": {
-        "machineKey": "ts:nSpare",
-        "maintenanceUntil": null,
-        "alerts": [],
-        "events": [
-          {
-            "id": "00000000000000000007",
-            "machineKey": "ts:nSpare",
-            "machineName": "spare-ubuntu",
-            "at": "2026-10-03T10:00:00Z",
-            "kind": "monitoringStarted",
-            "detail": "Started observing this machine. Earlier events are not known."
-          }
-        ]
-      },
-      "runners": [],
-      "warnings": [],
-      "desired": null
-    }
-  ],
   "unmatchedRunners": [
     {
       "key": "gh:acme-demo:501",
@@ -1839,24 +1747,21 @@
       "desired": null
     }
   ],
-  "ignored": [
+  "tailnetDevices": [
     {
-      "peer": {
-        "nodeId": "nNas",
-        "hostname": "home-nas",
-        "dnsName": "home-nas.demo.ts.net",
-        "os": "linux",
-        "ips": [
-          "100.64.0.0"
-        ],
-        "online": true,
-        "lastSeen": null,
-        "tags": [],
-        "sshHostKeys": [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoHostKeyForPreviewOnly"
-        ]
-      },
-      "ignoredAt": "2026-09-30T12:00:00Z"
+      "nodeId": "nLaptop",
+      "name": "dev-laptop",
+      "inventoryEntry": "[[hosts]]\nid = \"dev-laptop\"\nplatform = \"darwin-arm64\"\nssh = \"dev-laptop.demo.ts.net\"\nssh_transport = \"openssh\"\nroot = \"~/gh-runners/acme-demo\"\nservice_mode = \"launchagent\"\n"
+    },
+    {
+      "nodeId": "nNas",
+      "name": "home-nas",
+      "inventoryEntry": "[[hosts]]\nid = \"home-nas\"\nplatform = \"linux-x64\"\nssh = \"home-nas.demo.ts.net\"\nssh_transport = \"tailscale\"\nroot = \"~/gh-runners/acme-demo\"\nservice_mode = \"systemd\"\n"
+    },
+    {
+      "nodeId": "nSpare",
+      "name": "spare-ubuntu",
+      "inventoryEntry": "[[hosts]]\nid = \"spare-ubuntu\"\nplatform = \"linux-x64\"\nssh = \"spare-ubuntu.demo.ts.net\"\nssh_transport = \"tailscale\"\nroot = \"~/gh-runners/acme-demo\"\nservice_mode = \"systemd\"\n"
     }
   ],
   "queue": {
@@ -1975,7 +1880,7 @@
     ],
     "events": [
       {
-        "id": "00000000000000000010",
+        "id": "00000000000000000008",
         "machineKey": "inv:mac-mini-02",
         "machineName": "mac-mini-02",
         "at": "2026-10-03T11:48:00Z",
@@ -1983,7 +1888,7 @@
         "detail": "/: 5.7% free (13.0 GiB of 228.2 GiB)."
       },
       {
-        "id": "00000000000000000009",
+        "id": "00000000000000000007",
         "machineKey": "inv:studio",
         "machineName": "studio",
         "at": "2026-10-03T11:23:00Z",
@@ -1991,28 +1896,12 @@
         "detail": "studio-1: inactive → running."
       },
       {
-        "id": "00000000000000000008",
+        "id": "00000000000000000006",
         "machineKey": "inv:studio",
         "machineName": "studio",
         "at": "2026-10-03T11:22:00Z",
         "kind": "rebooted",
         "detail": "A different operating-system boot session was observed."
-      },
-      {
-        "id": "00000000000000000007",
-        "machineKey": "ts:nSpare",
-        "machineName": "spare-ubuntu",
-        "at": "2026-10-03T10:00:00Z",
-        "kind": "monitoringStarted",
-        "detail": "Started observing this machine. Earlier events are not known."
-      },
-      {
-        "id": "00000000000000000006",
-        "machineKey": "ts:nLaptop",
-        "machineName": "dev-laptop",
-        "at": "2026-10-03T10:00:00Z",
-        "kind": "monitoringStarted",
-        "detail": "Started observing this machine. Earlier events are not known."
       },
       {
         "id": "00000000000000000005",

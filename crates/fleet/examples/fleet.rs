@@ -10,7 +10,7 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use fleet::desired::{inventory, operations, parity, plan, real_boundaries, state};
-use fleet::machine::{MachineSource, MachineTarget};
+use fleet::machine::MachineSource;
 
 /// Limit for each GitHub request and SSH command, as in the app.
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(20);
@@ -36,7 +36,7 @@ fn main() -> ExitCode {
             "inventory" => Ok((parity::inventory(&inventory), true)),
             "health" => {
                 let id = host.as_deref().ok_or("health requires an inventory host name")?;
-                let target = MachineTarget::Inventory(inventory.find_host(id).map_err(|e| e.0)?.clone());
+                let target = inventory.find_host(id).map_err(|e| e.0)?.clone();
                 let report = fleet::machine::remote_client().inspect(&target).map_err(|e| e.0)?;
                 Ok((serde_json::to_value(report).map_err(|e| e.to_string())?, true))
             }

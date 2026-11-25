@@ -31,20 +31,24 @@ facts. Only selected Tailscale preference fields are returned; raw preferences a
 never leave the machine. Checks distinguish pass, warning, information and unknown. An incomplete
 diagnostic section becomes unknown without discarding otherwise valid health and runner data.
 Diagnostics inherit the health observation's timestamp and freshness. Fleet warnings use only
-fresh, connected observations, and include discovered machines without inventory entries.
+fresh, connected observations.
 
 The inventory chooses `ssh` or `tailscale ssh`. OpenSSH uses batch mode, trusted host keys, no
 agent forwarding and no port forwarding. Scripts travel on stdin, never as long command-line
 arguments; Windows scripts are a base64 line read with `[Console]::In.ReadLine()`, so nothing
-waits on stdin EOF through cmd.exe. Discovered machines outside the inventory can report health
-using their tailnet address and advertised Tailscale SSH, or this Mac's OpenSSH configuration;
-runner paths still come from the inventory.
+waits on stdin EOF through cmd.exe. Only inventory hosts are inspected: `MachineSource::inspect`
+takes an inventory `Host`, so there is no way to point an SSH check at a tailnet device outside
+the inventory.
 
 Each result is a timestamped observation. Errors are recorded beside the last successful read.
 `derive(config, observations, plan, now, source)` produces the complete view without I/O.
 Machines use `ts:<node id>` as their UI identity, or `inv:<host id>` without a tailnet match.
-Inventory SSH aliases resolve through `ssh -G`. Other desktop and server machines appear under
-Other machines; ignored machines and phones don't get automatic SSH reads.
+Inventory SSH aliases resolve through `ssh -G`. Machines are the inventory's hosts only. A tailnet
+device no host claims gets no machine view, no SSH read, no issue and no monitoring state. Add
+machine lists such desktop and server devices by name from the tailnet snapshot, with a
+`[[hosts]]` entry built in `add_machine.rs`. History that older versions saved under a tailnet key
+for such a device is dropped on the first refresh with a fresh tailnet and a loaded inventory.
+When the inventory fails to load, the overview says why, with the error and the inventory path.
 
 The UI receives fleet-updated events after polls and every five seconds so ages advance.
 

@@ -1,6 +1,7 @@
 //! Read-only machine health and runner facts collected in one SSH session.
 //!
 //! Uses the same transport and exact runner paths as reviewed fleet operations.
+//! Only inventory hosts are inspected: a tailnet device outside the inventory is never a target.
 //! Nothing is installed on a host; unavailable metrics remain unknown.
 
 use std::collections::BTreeMap;
@@ -10,12 +11,11 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::desired::model::{Host, LocalRunner, Platform, SshTransport};
+use crate::desired::model::{Host, LocalRunner, Platform};
 use crate::desired::process::SubprocessRunner;
 use crate::desired::remote::{
     Connection, Programs, RemoteClient, RemoteError, parse_posix_probe, parse_windows_probe, probe_script,
 };
-use crate::model::{TailnetPeer, tailnet_machine_key};
 
 const POSIX_HEALTH: &str = include_str!("../scripts/machine-health.sh");
 const WINDOWS_HEALTH: &str = include_str!("../scripts/machine-health.ps1");
@@ -102,78 +102,10 @@ pub struct MachineReport {
     pub warnings: Vec<String>,
 }
 
-/// What a machine check connects to.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MachineTarget {
-    /// An inventory host: its runners are probed at their exact paths.
-    Inventory(Host),
-    /// A tailnet machine with no inventory entry, which can still report its health.
-    Discovered(DiscoveredMachine),
-}
-
-/// A tailnet peer outside the inventory. Tailscale reports its OS but not its
-/// architecture, and it has no runners to probe.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DiscoveredMachine {
-    /// `ts:<node id>`.
-    pub id: String,
-    pub address: String,
-    pub os: OsFamily,
-    pub ssh_transport: SshTransport,
-}
-
-impl MachineTarget {
-    /// Prefer advertised Tailscale SSH; otherwise use the current user's OpenSSH access.
-    pub fn discovered(peer: &TailnetPeer) -> Self {
-        Self::Discovered(DiscoveredMachine {
-            id: tailnet_machine_key(&peer.node_id),
-            address: peer.address(),
-            os: OsFamily::from_tailnet(&peer.os),
-            ssh_transport: if peer.ssh_host_keys.is_empty() {
-                SshTransport::Openssh
-            } else {
-                SshTransport::Tailscale
-            },
-        })
-    }
-
-    pub fn host(&self) -> Option<&Host> {
-        match self {
-            Self::Inventory(host) => Some(host),
-            Self::Discovered(_) => None,
-        }
-    }
-
-    /// The OS the machine must report; `Other` accepts any.
-    fn expected_os(&self) -> OsFamily {
-        match self {
-            Self::Inventory(host) => host.platform.into(),
-            Self::Discovered(machine) => machine.os,
-        }
-    }
-
-    fn is_windows(&self) -> bool {
-        self.expected_os() == OsFamily::Windows
-    }
-
-    pub fn connection(&self) -> Connection<'_> {
-        match self {
-            Self::Inventory(host) => host.into(),
-            Self::Discovered(machine) => Connection {
-                id: &machine.id,
-                target: Some(&machine.address),
-                setting: &machine.address,
-                transport: machine.ssh_transport,
-                windows: machine.os == OsFamily::Windows,
-            },
-        }
-    }
-}
-
 /// Injectable read-only boundary; tests never connect to real hosts.
 pub trait MachineSource: Send + Sync {
     /// Blocks until the SSH read completes or times out. Call off the async runtime.
-    fn inspect(&self, target: &MachineTarget) -> Result<MachineReport, RemoteError>;
+    fn inspect(&self, host: &Host) -> Result<MachineReport, RemoteError>;
 }
 
 /// Locate the same SSH programs used by the app's runner operations.
@@ -182,16 +114,16 @@ pub fn remote_client() -> RemoteClient {
 }
 
 impl MachineSource for RemoteClient {
-    fn inspect(&self, target: &MachineTarget) -> Result<MachineReport, RemoteError> {
-        let output = self.run_script(target.connection(), &inspection_script(target), None)?;
-        parse_inspection(target, &output)
+    fn inspect(&self, host: &Host) -> Result<MachineReport, RemoteError> {
+        let output = self.run_script(Connection::from(host), &inspection_script(host), None)?;
+        parse_inspection(host, &output)
     }
 }
 
 /// The complete read-only script, exposed for diagnostics and fake transport tests.
-pub fn inspection_script(target: &MachineTarget) -> String {
-    let probe = target.host().map(probe_script).unwrap_or_default();
-    if target.is_windows() {
+pub fn inspection_script(host: &Host) -> String {
+    let probe = probe_script(host);
+    if host.is_windows() {
         format!("{WINDOWS_HEALTH}\n& {{\n{WINDOWS_DIAGNOSTICS}\n}}\nWrite-Output '{RUNNERS_MARKER}'\n{probe}")
     } else {
         format!("{POSIX_HEALTH}\n(\n{POSIX_DIAGNOSTICS}\n)\nprintf '{RUNNERS_MARKER}\\n'\n{probe}")
@@ -199,7 +131,7 @@ pub fn inspection_script(target: &MachineTarget) -> String {
 }
 
 /// Decode metrics and runner rows, rejecting truncated or mismatched responses.
-pub fn parse_inspection(target: &MachineTarget, output: &str) -> Result<MachineReport, RemoteError> {
+pub fn parse_inspection(host: &Host, output: &str) -> Result<MachineReport, RemoteError> {
     let (health, runners) = output
         .split_once(&format!("{RUNNERS_MARKER}\n"))
         .or_else(|| output.split_once(&format!("{RUNNERS_MARKER}\r\n")))
@@ -251,12 +183,10 @@ pub fn parse_inspection(target: &MachineTarget, output: &str) -> Result<MachineR
             ));
         }
     };
-    let expected_os = target.expected_os();
-    if expected_os != OsFamily::Other && os != expected_os {
-        return Err(RemoteError(match target {
-            MachineTarget::Inventory(_) => "The machine's operating system doesn't match its inventory platform. Fix the host's `platform` or `ssh` target in the inventory.".into(),
-            MachineTarget::Discovered(_) => "The machine's operating system doesn't match the one Tailscale reports.".into(),
-        }));
+    if os != OsFamily::from(host.platform) {
+        return Err(RemoteError(
+            "The machine's operating system doesn't match its inventory platform. Fix the host's `platform` or `ssh` target in the inventory.".into(),
+        ));
     }
     let get = |name: &str| fields.get(name).copied().filter(|v| !v.is_empty());
     let cpu_percent = get("cpu").map(|v| number::<f32>("CPU usage", v)).transpose()?;
@@ -289,10 +219,10 @@ pub fn parse_inspection(target: &MachineTarget, output: &str) -> Result<MachineR
     {
         return Err(RemoteError("Invalid memory capacity in the SSH report.".into()));
     }
-    let expected: Vec<&str> = target.host().map(|h| h.runner_names().collect()).unwrap_or_default();
+    let expected: Vec<&str> = host.runner_names().collect();
     let runners = if expected.is_empty() && matches!(runners.trim(), "" | "[]") {
         BTreeMap::new()
-    } else if target.is_windows() {
+    } else if host.is_windows() {
         parse_windows_probe(runners)?
     } else {
         parse_posix_probe(runners)?

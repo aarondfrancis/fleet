@@ -54,12 +54,10 @@ impl Engine {
             ));
         }
         let view = self.view();
-        let machine = view
-            .machines
-            .iter()
-            .chain(&view.other_machines)
-            .find(|m| m.id == id)
-            .ok_or_else(|| EngineError::NotFound("This machine is no longer listed. Refresh and try again.".into()))?;
+        let machine =
+            view.machines.iter().find(|m| m.id == id).ok_or_else(|| {
+                EngineError::NotFound("This machine is no longer listed. Refresh and try again.".into())
+            })?;
         let now = Utc::now();
         self.monitoring
             .locked()

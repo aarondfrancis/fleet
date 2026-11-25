@@ -169,8 +169,6 @@ pub fn run() {
             commands::update_org_token,
             commands::set_org_scope,
             commands::remove_org,
-            commands::ignore_peer,
-            commands::unignore_peer,
             commands::set_machine_preferences,
             commands::set_machine_maintenance,
             commands::get_monitoring_events,

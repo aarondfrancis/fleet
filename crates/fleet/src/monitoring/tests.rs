@@ -15,7 +15,6 @@ fn view(at: DateTime<Utc>) -> FleetView {
         DataSource::Live,
     );
     view.machines.retain(|m| m.display_name == "studio");
-    view.other_machines.clear();
     sample(&mut view, at);
     view.monitoring.desktop_notifications = true;
     view
@@ -272,7 +271,7 @@ fn failed_writes_hold_notifications_and_roll_back_maintenance_until_storage_reco
 }
 
 #[test]
-fn adding_a_discovered_machine_to_inventory_preserves_its_history() {
+fn history_saved_under_a_tailnet_key_moves_to_the_inventory_host() {
     let (_dir, mut store) = store();
     let mut v = view(now());
     let desired = v.machines[0].desired.take();
@@ -292,6 +291,39 @@ fn adding_a_discovered_machine_to_inventory_preserves_its_history() {
             .iter()
             .all(|e| e.machine_key == machine.preferences_key())
     );
+}
+
+#[test]
+fn history_and_alerts_of_a_device_outside_the_inventory_are_dropped() {
+    let (dir, mut store) = store();
+    // Earlier versions watched tailnet devices outside the inventory, such as a family computer.
+    let mut family = view(now());
+    let machine = &mut family.machines[0];
+    machine.id = "ts:nFamily".into();
+    machine.display_name = "family-pc".into();
+    machine.desired = None;
+    store.deliver(&family, now());
+    offline(&mut family);
+    for tick in 1..=15 {
+        let at = now() + Duration::seconds(tick * 15);
+        sample(&mut family, at);
+        store.deliver(&family, at);
+    }
+    attach(&store, &mut family);
+    assert_eq!(family.monitoring.alerts[0].machine_key, "ts:nFamily");
+
+    let mut current = view(now() + Duration::minutes(5));
+    store.deliver(&current, current.generated_at);
+    let store = MonitorStore::load(dir.path().join("monitoring.json"));
+    attach(&store, &mut current);
+    crate::issues::attach(&mut current);
+    let saved = std::fs::read_to_string(dir.path().join("monitoring.json")).unwrap();
+    let shown = serde_json::to_string(&current).unwrap();
+    for text in [saved, shown] {
+        assert!(!text.contains("ts:nFamily") && !text.contains("family-pc"), "{text}");
+    }
+    assert!(current.monitoring.alerts.is_empty());
+    assert!(!current.monitoring.events.is_empty());
 }
 
 #[test]
@@ -509,7 +541,7 @@ fn persisted_notifications_survive_incomplete_discovery_and_inventory() {
     ] {
         let (dir, mut store) = store();
         let mut v = view(now());
-        // A discovered peer has no inventory entry to keep it visible during startup.
+        // A machine without an inventory entry has nothing to keep it visible during startup.
         v.machines[0].desired = None;
         let notice = disk_notice(&mut store, &mut v).pop().unwrap();
         let path = dir.path().join("monitoring.json");
@@ -517,7 +549,6 @@ fn persisted_notifications_survive_incomplete_discovery_and_inventory() {
         let mut store = MonitorStore::load(path.clone());
         let mut absent = v.clone();
         absent.machines.clear();
-        absent.other_machines.clear();
         absent.generated_at = now() + Duration::minutes(3);
         match missing_evidence {
             "pending" => {

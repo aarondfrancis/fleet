@@ -182,30 +182,6 @@ impl Engine {
         self.obs.read_locked().tailscale.is_some()
     }
 
-    pub fn ignore_peer(&self, node_id: &str) -> Result<(), EngineError> {
-        let name = self
-            .obs
-            .read_locked()
-            .tailscale
-            .as_ref()
-            .and_then(|t| t.value.peers.iter().find(|p| p.node_id == node_id))
-            .map(|p| p.hostname.clone())
-            .unwrap_or_else(|| node_id.to_string());
-        self.update_config(|c| {
-            if !c.ignored_peers.iter().any(|i| i.tailscale_node_id == node_id) {
-                c.ignored_peers.push(IgnoredPeer {
-                    tailscale_node_id: node_id.to_string(),
-                    name,
-                    ignored_at: Utc::now(),
-                });
-            }
-        })
-    }
-
-    pub fn unignore_peer(&self, node_id: &str) -> Result<(), EngineError> {
-        self.update_config(|c| c.ignored_peers.retain(|i| i.tailscale_node_id != node_id))
-    }
-
     pub fn set_local_api(&self, on: bool) -> Result<(), EngineError> {
         self.update_config(|c| c.local_api = on)
     }

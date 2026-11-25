@@ -48,7 +48,7 @@ pub(crate) fn derive_without_issues(
     let checked = machines::Checked::build(plan);
     let gh = GithubIndex::build(config, obs, now);
     let mut matched: HashSet<String> = HashSet::new();
-    let machines::Machines { fleet, other } =
+    let machines::Machines { fleet, devices } =
         machines::assemble(config, obs, plan, checked.as_ref(), &gh, &mut matched, now);
 
     let mut unmatched_runners: Vec<RunnerView> = gh
@@ -59,7 +59,6 @@ pub(crate) fn derive_without_issues(
         .collect();
     unmatched_runners.sort_by_key(|r| (r.org.clone(), r.name.to_lowercase(), r.key.clone()));
 
-    let ignored = ignored_peers(config, obs);
     let all_runners: Vec<&RunnerView> = fleet
         .iter()
         .flat_map(|m| m.runners.iter())
@@ -75,9 +74,8 @@ pub(crate) fn derive_without_issues(
         summary,
         issues: Vec::new(),
         machines: fleet,
-        other_machines: other,
         unmatched_runners,
-        ignored,
+        tailnet_devices: devices,
         queue,
         orgs: org_statuses(config, obs),
         tailnet: TailnetStatusView {
@@ -106,7 +104,7 @@ fn observed_plan(plan: &FleetPlanInputs, obs: &Observations, now: DateTime<Utc>)
             let Some(observation) = obs
                 .machines
                 .get(&inventory_machine_key(&host.id))
-                .filter(|o| o.target.host() == Some(host))
+                .filter(|o| o.target == *host)
             else {
                 continue;
             };
@@ -383,45 +381,6 @@ fn job_view(j: &GhJob) -> JobView {
         started_at: j.started_at,
         html_url: j.html_url.clone(),
         labels: j.labels.clone(),
-    }
-}
-
-/// Tailnet machines the user chose to ignore, with their current tailnet facts.
-fn ignored_peers(config: &AppConfig, obs: &Observations) -> Vec<DiscoveredPeerView> {
-    let peers = obs
-        .tailscale
-        .as_ref()
-        .map(|t| t.value.peers.as_slice())
-        .unwrap_or_default();
-    let mut ignored: Vec<DiscoveredPeerView> = config
-        .ignored_peers
-        .iter()
-        .map(|i| match peers.iter().find(|p| p.node_id == i.tailscale_node_id) {
-            Some(p) => DiscoveredPeerView {
-                peer: p.clone(),
-                ignored_at: Some(i.ignored_at),
-            },
-            None => placeholder_ignored(i),
-        })
-        .collect();
-    ignored.sort_by_key(|d| (d.peer.hostname.to_lowercase(), d.peer.node_id.clone()));
-    ignored
-}
-
-fn placeholder_ignored(i: &IgnoredPeer) -> DiscoveredPeerView {
-    DiscoveredPeerView {
-        peer: TailnetPeer {
-            node_id: i.tailscale_node_id.clone(),
-            hostname: i.name.clone(),
-            dns_name: None,
-            os: String::new(),
-            ips: Vec::new(),
-            online: false,
-            last_seen: None,
-            tags: Vec::new(),
-            ssh_host_keys: Vec::new(),
-        },
-        ignored_at: Some(i.ignored_at),
     }
 }
 

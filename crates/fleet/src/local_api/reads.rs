@@ -29,7 +29,7 @@ pub(super) async fn index(Extension(s): Extension<Snapshot>, Parameters(_): Para
             "stale": "Last known observations, not current facts. Missing data never means zero or recovered.",
             "activity": "busy | idle | offline | unknown; busy and idle require fresh GitHub data.",
             "currentJob": "Only populated when GitHub links the job to the runner; repo filters on runners inspect this field.",
-            "machines": "Default scope=all includes fleet and other discovered machines. Ignored peers remain in /v1/discovered. Summary machine counts refer to fleet machines.",
+            "machines": "Machines are the inventory's hosts. Tailnet devices outside the inventory are never machines, are never contacted, and appear only in tailnetDevices on /v1/fleet.",
             "identifiers": "Exact IDs take precedence, followed by inventory aliases, then names. Ambiguous names return 409 with candidate IDs.",
             "pagination": "Lists are sorted by stable ID with exclusive after and nextCursor. Events are newest first with exclusive before. Restart list pagination if revision changes.",
             "revision": "Opaque fingerprint of the fleet snapshot excluding generatedAt. ETags describe each response. Poll /v1/changes?since=revision or use If-None-Match on GET.",
@@ -89,13 +89,10 @@ pub(super) async fn machines(
     Parameters(q): Parameters<queries::MachineQuery>,
 ) -> Reply {
     let limit = queries::limit(q.limit, DEFAULT_PAGE_SIZE)?;
-    let machines = match q.scope {
-        queries::MachineScope::All => s.view.machines.iter().chain(&s.view.other_machines).collect::<Vec<_>>(),
-        queries::MachineScope::Fleet => s.view.machines.iter().collect(),
-        queries::MachineScope::Discovered => s.view.other_machines.iter().collect(),
-    };
-    let machines = machines
-        .into_iter()
+    let machines = s
+        .view
+        .machines
+        .iter()
         .filter(|m| {
             q.os.is_none_or(|os| m.os == Some(os))
                 && q.connection.is_none_or(|c| c.matches(&m.connection))
@@ -108,7 +105,7 @@ pub(super) async fn machines(
         .collect();
     let (machines, total, cursor) = queries::page(machines, limit, q.after.as_deref(), |m| m.id.clone());
     Ok(Json(
-        json!({ "scope": q.scope, "machines": machines, "total": total, "nextCursor": cursor }),
+        json!({ "machines": machines, "total": total, "nextCursor": cursor }),
     ))
 }
 
@@ -187,10 +184,6 @@ pub(super) async fn queue(Extension(s): Extension<Snapshot>, Parameters(q): Para
     Ok(Json(json!({ "queue": queue, "total": total, "nextCursor": cursor })))
 }
 
-pub(super) async fn discovered(Extension(s): Extension<Snapshot>, Parameters(_): Parameters<NoQuery>) -> Json<Value> {
-    Json(json!({ "otherMachines": s.view.other_machines, "ignored": s.view.ignored }))
-}
-
 pub(super) async fn desired(
     Extension(s): Extension<Snapshot>,
     Parameters(q): Parameters<queries::MachineFilter>,
@@ -200,7 +193,7 @@ pub(super) async fn desired(
         .as_ref()
         .map(|id| queries::resolve_machine(&s.view, id))
         .transpose()?;
-    let hosts: Vec<_> = s.view.machines.iter().chain(&s.view.other_machines)
+    let hosts: Vec<_> = s.view.machines.iter()
         .filter(|m| selected.is_none_or(|s| s.id == m.id))
         .filter_map(|m| m.desired.as_ref().map(|d| json!({ "machineId": m.id, "machineKey": m.preferences_key(),
             "machineName": m.display_name, "desired": d,

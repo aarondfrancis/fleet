@@ -1,19 +1,24 @@
 use super::*;
-use crate::desired::model::SshTransport;
-use crate::machine::{DiscoveredMachine, MachineTarget, parse_inspection};
+use crate::machine::parse_inspection;
 
-/// A machine whose reported OS is accepted as is.
-fn any_os() -> MachineTarget {
-    MachineTarget::Discovered(DiscoveredMachine {
-        id: "ts:test".into(),
-        address: "test".into(),
-        os: OsFamily::Other,
-        ssh_transport: SshTransport::Openssh,
-    })
+/// A demo inventory host on `os`, with no runners to probe.
+fn host_on(os: &str) -> Host {
+    let platform = match os {
+        "macos" => "darwin-arm64",
+        "linux" => "linux-x64",
+        _ => "windows-x64",
+    };
+    let mut host = crate::demo_desired::inventory()
+        .hosts
+        .into_iter()
+        .find(|h| h.platform.as_str() == platform)
+        .unwrap();
+    host.runners.clear();
+    host
 }
 
 fn report(os: &str, facts: &[(&str, &str)]) -> MachineReport {
-    let mut report = parse_inspection(&any_os(), &format!("RFM\tos\t{os}\nRFM_END\nRFM_RUNNERS\n")).unwrap();
+    let mut report = parse_inspection(&host_on(os), &format!("RFM\tos\t{os}\nRFM_END\nRFM_RUNNERS\n")).unwrap();
     report.diagnostics = facts.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
     report
 }
@@ -111,7 +116,7 @@ fn runner_checks_use_actual_services_and_exclude_decommissioned_runners() {
 fn incomplete_diagnostics_do_not_replace_unknown_with_partial_success() {
     for (end, expected) in [("", false), ("RFM\tdiag:complete\t1\n", true)] {
         let report = parse_inspection(
-            &any_os(),
+            &host_on("linux"),
             &format!("RFM\tos\tlinux\nRFM_END\nRFM\tdiag:tailscale_ssh\ttrue\n{end}RFM_RUNNERS\n"),
         )
         .unwrap();
@@ -165,7 +170,12 @@ esac
         assert!(output.status.success());
         let output = String::from_utf8(output.stdout).unwrap();
         assert!(!output.contains("DO_NOT_EXPORT"));
-        let report = parse_inspection(&any_os(), &format!("RFM\tos\tother\nRFM_END\n{output}RFM_RUNNERS\n")).unwrap();
+        let family = if os == "Darwin" { "macos" } else { "linux" };
+        let report = parse_inspection(
+            &host_on(family),
+            &format!("RFM\tos\t{family}\nRFM_END\n{output}RFM_RUNNERS\n"),
+        )
+        .unwrap();
         assert_eq!(report.diagnostics["tailscale_ssh"], "true");
         assert_eq!(report.diagnostics["tailscale_version"], "1.90.0");
         assert_eq!(report.diagnostics["identity"], "builder");

@@ -1,10 +1,11 @@
-//! Assembling machines. Each runner-capable tailnet machine becomes one
-//! machine, joined with its inventory host, SSH observations and GitHub runners.
-//! Runner names and paths come from the inventory; health also works without one.
+//! Assembling machines. Each inventory host becomes one machine, joined with
+//! its tailnet peer, SSH observations and GitHub runners. A tailnet peer no
+//! host claims is only offered to Add machine, never observed.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::machine::{MachineReport, MachineTarget, OsFamily};
+use crate::add_machine::{TailnetDeviceView, device_view};
+use crate::machine::{MachineReport, OsFamily};
 use chrono::{DateTime, Utc};
 
 use super::{GhEntry, GithubIndex, connection, runner_view};
@@ -17,17 +18,15 @@ use crate::fleet_plan::{
 use crate::model::*;
 
 pub(super) struct Machines {
-    /// In the inventory or with runners.
     pub fleet: Vec<MachineView>,
-    /// Other runner-capable tailnet machines.
-    pub other: Vec<MachineView>,
+    pub devices: Vec<TailnetDeviceView>,
 }
 
-/// One machine before it's turned into a view.
+/// One inventory host before it's turned into a view.
 struct Slot<'a> {
     id: String,
     peer: Option<&'a TailnetPeer>,
-    host: Option<&'a Host>,
+    host: &'a Host,
     identity_error: Option<String>,
 }
 
@@ -58,7 +57,7 @@ impl Checked {
 struct DeriveCtx<'a> {
     obs: &'a Observations,
     plan: &'a FleetPlanInputs,
-    inventory: Option<&'a Inventory>,
+    inventory: &'a Inventory,
     checked: Option<&'a Checked>,
     gh: &'a GithubIndex,
     now: DateTime<Utc>,
@@ -90,12 +89,12 @@ pub(super) fn assemble(
                 .collect()
         })
         .unwrap_or_default();
-    let ignored: HashSet<&str> = config
-        .ignored_peers
-        .iter()
-        .map(|i| i.tailscale_node_id.as_str())
-        .collect();
-    let inventory = plan.inventory.as_ref().and_then(|r| r.as_ref().ok());
+    let Some(inventory) = plan.inventory.as_ref().and_then(|r| r.as_ref().ok()) else {
+        return Machines {
+            fleet: Vec::new(),
+            devices: devices(&peers, &HashSet::new(), None),
+        };
+    };
     let ctx = DeriveCtx {
         obs,
         plan,
@@ -105,9 +104,8 @@ pub(super) fn assemble(
         now,
     };
 
-    let slots = slots(&peers, &ignored, inventory, &plan.ssh_hosts);
+    let (slots, claimed) = slots(&peers, inventory, &plan.ssh_hosts);
     let mut fleet = Vec::new();
-    let mut other = Vec::new();
     for slot in &slots {
         let mut view = machine_view(slot, &ctx, matched);
         let key = view.preferences_key();
@@ -121,31 +119,36 @@ pub(super) fn assemble(
             }
             view.description.clone_from(&preferences.description);
         }
-        let is_fleet = slot.host.is_some() || !view.runners.is_empty();
-        if is_fleet {
-            fleet.push(view);
-        } else if slot.peer.is_some_and(TailnetPeer::can_host_runners) {
-            other.push(view);
-        }
+        fleet.push(view);
     }
-    let order = |m: &MachineView| (m.display_name.to_lowercase(), m.id.clone());
-    fleet.sort_by_key(order);
-    other.sort_by_key(order);
-    Machines { fleet, other }
+    fleet.sort_by_key(|m| (m.display_name.to_lowercase(), m.id.clone()));
+    Machines {
+        fleet,
+        devices: devices(&peers, &claimed, Some(&inventory.organization.name)),
+    }
 }
 
-/// Every machine: inventory hosts first (matched to their tailnet machine),
-/// then the remaining tailnet machines.
+/// Tailnet devices for Add machine, by name.
+fn devices(peers: &[TailnetPeer], claimed: &HashSet<&str>, organization: Option<&str>) -> Vec<TailnetDeviceView> {
+    let mut devices: Vec<_> = peers
+        .iter()
+        .filter(|p| !claimed.contains(p.node_id.as_str()))
+        .filter_map(|p| device_view(p, organization))
+        .collect();
+    devices.sort_by_key(|d| (d.name.to_lowercase(), d.node_id.clone()));
+    devices
+}
+
+/// One slot per inventory host, matched to its tailnet peer, and the peers they claim.
 fn slots<'a>(
     peers: &'a [TailnetPeer],
-    ignored: &HashSet<&str>,
-    inventory: Option<&'a Inventory>,
+    inventory: &'a Inventory,
     ssh_hosts: &BTreeMap<String, String>,
-) -> Vec<Slot<'a>> {
+) -> (Vec<Slot<'a>>, HashSet<&'a str>) {
     let mut slots: Vec<Slot<'a>> = Vec::new();
     let mut claimed_nodes: HashSet<&str> = HashSet::new();
 
-    for host in inventory.map(|i| i.hosts.as_slice()).unwrap_or_default() {
+    for host in &inventory.hosts {
         let resolved = host
             .ssh_target
             .as_deref()
@@ -158,38 +161,21 @@ fn slots<'a>(
         slots.push(Slot {
             id: peer.map_or_else(|| inventory_machine_key(&host.id), |p| tailnet_machine_key(&p.node_id)),
             peer,
-            host: Some(host),
+            host,
             identity_error: None,
         });
     }
 
-    let conflicts = inventory
-        .map(|inventory| host_identity_conflicts(inventory, ssh_hosts, peers))
-        .unwrap_or_default();
+    let conflicts = host_identity_conflicts(inventory, ssh_hosts, peers);
     for slot in &mut slots {
-        if let Some(host) = slot.host
-            && let Some(error) = conflicts.get(&host.id)
-        {
+        if let Some(error) = conflicts.get(&slot.host.id) {
             slot.identity_error = Some(error.clone());
-            slot.id = inventory_machine_key(&host.id);
+            slot.id = inventory_machine_key(&slot.host.id);
             // Shared peer facts and preferences cannot identify either inventory host.
             slot.peer = None;
         }
     }
-
-    for p in peers {
-        if claimed_nodes.contains(p.node_id.as_str()) || ignored.contains(p.node_id.as_str()) {
-            continue;
-        }
-        claimed_nodes.insert(&p.node_id);
-        slots.push(Slot {
-            id: tailnet_machine_key(&p.node_id),
-            peer: Some(p),
-            host: None,
-            identity_error: None,
-        });
-    }
-    slots
+    (slots, claimed_nodes)
 }
 
 fn machine_view(slot: &Slot<'_>, ctx: &DeriveCtx<'_>, matched: &mut HashSet<String>) -> MachineView {
@@ -202,7 +188,7 @@ fn machine_view(slot: &Slot<'_>, ctx: &DeriveCtx<'_>, matched: &mut HashSet<Stri
     };
     let connection = if let Some(error) = &slot.identity_error {
         MachineConnection::Error { detail: error.clone() }
-    } else if slot.host.is_some_and(|h| !h.enabled) {
+    } else if !slot.host.enabled {
         MachineConnection::Disabled
     } else {
         observed_connection
@@ -225,21 +211,14 @@ fn machine_view(slot: &Slot<'_>, ctx: &DeriveCtx<'_>, matched: &mut HashSet<Stri
         }
     });
 
-    let (mut runners, mut desired) = match (slot.host, ctx.inventory) {
-        (Some(host), Some(inventory)) => (
-            inventory_runners(slot, host, inventory, ctx, &observed, matched),
-            Some(machine_desired(host, ctx.plan, ctx.checked)),
-        ),
-        _ => (Vec::new(), None),
-    };
+    let mut runners = inventory_runners(slot, ctx, &observed, matched);
+    let mut desired = machine_desired(slot.host, ctx.plan, ctx.checked);
     if let Some(error) = &slot.identity_error {
-        if let Some(desired) = &mut desired {
-            desired.error = Some(error.clone());
-            desired.pending_changes = 0;
-            for item in &mut desired.plan {
-                item.blocked = true;
-                item.reason.clone_from(error);
-            }
+        desired.error = Some(error.clone());
+        desired.pending_changes = 0;
+        for item in &mut desired.plan {
+            item.blocked = true;
+            item.reason.clone_from(error);
         }
         for runner in &mut runners {
             if let Some(desired) = &mut runner.desired {
@@ -256,20 +235,19 @@ fn machine_view(slot: &Slot<'_>, ctx: &DeriveCtx<'_>, matched: &mut HashSet<Stri
     MachineView {
         id: slot.id.clone(),
         description: None,
-        display_name: slot
-            .host
-            .map(|h| h.id.clone())
-            .or_else(|| slot.peer.map(|p| p.hostname.clone()))
-            .unwrap_or_else(|| slot.id.clone()),
+        display_name: slot.host.id.clone(),
         host: slot
             .host
-            .and_then(|h| h.ssh_target.clone())
+            .ssh_target
+            .clone()
             .or_else(|| slot.peer.map(TailnetPeer::address))
             .unwrap_or_default(),
-        os: report
-            .map(|r| r.value.os)
-            .or_else(|| slot.peer.map(|p| OsFamily::from_tailnet(&p.os)))
-            .or_else(|| slot.host.map(|h| h.platform.into())),
+        os: Some(
+            report
+                .map(|r| r.value.os)
+                .or_else(|| slot.peer.map(|p| OsFamily::from_tailnet(&p.os)))
+                .unwrap_or_else(|| slot.host.platform.into()),
+        ),
         os_version: report.and_then(|r| r.value.os_version.clone()),
         tailnet: slot.peer.cloned(),
         connection,
@@ -277,12 +255,12 @@ fn machine_view(slot: &Slot<'_>, ctx: &DeriveCtx<'_>, matched: &mut HashSet<Stri
         diagnostics: report.map(|r| crate::machine_diagnostics::MachineDiagnostics {
             as_of: r.at,
             stale: !fresh,
-            checks: crate::machine_diagnostics::evaluate(&r.value, slot.host),
+            checks: crate::machine_diagnostics::evaluate(&r.value, Some(slot.host)),
         }),
         monitoring: crate::monitoring::FleetMachineMonitoring::default(),
         runners,
         warnings: report.map(|r| r.value.warnings.clone()).unwrap_or_default(),
-        desired,
+        desired: Some(desired),
     }
 }
 
@@ -290,30 +268,28 @@ fn observation<'a>(slot: &Slot<'_>, obs: &'a Observations) -> Option<&'a Machine
     if slot.identity_error.is_some() {
         return None;
     }
-    let key = slot
-        .host
-        .map_or_else(|| slot.id.clone(), |h| inventory_machine_key(&h.id));
-    let target = slot
-        .host
-        .cloned()
-        .map(MachineTarget::Inventory)
-        .or_else(|| slot.peer.map(MachineTarget::discovered))?;
-    obs.machines.get(&key).filter(|o| o.target == target)
+    obs.machines
+        .get(&inventory_machine_key(&slot.host.id))
+        .filter(|o| o.target == *slot.host)
 }
 
 /// Declared runners (and the legacy runners they replace) and GitHub runners
 /// carrying this host's `host-*` label.
 fn inventory_runners(
     slot: &Slot<'_>,
-    host: &Host,
-    inventory: &Inventory,
     ctx: &DeriveCtx<'_>,
     observed: &Observed<'_>,
     matched: &mut HashSet<String>,
 ) -> Vec<RunnerView> {
     let DeriveCtx {
-        plan, checked, gh, now, ..
+        plan,
+        inventory,
+        checked,
+        gh,
+        now,
+        ..
     } = *ctx;
+    let host = slot.host;
     let mut runners: Vec<RunnerView> = Vec::new();
     let org = inventory.organization.name.to_lowercase();
     let Observed { report, connected } = *observed;

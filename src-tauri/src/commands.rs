@@ -108,20 +108,6 @@ pub async fn remove_org(app: AppHandle, engine: EngineState<'_>, login: String) 
 }
 
 #[tauri::command]
-pub fn ignore_peer(app: AppHandle, engine: EngineState, node_id: String) -> Result<()> {
-    engine.ignore_peer(&node_id)?;
-    emit_view(&app, &engine);
-    Ok(())
-}
-
-#[tauri::command]
-pub fn unignore_peer(app: AppHandle, engine: EngineState, node_id: String) -> Result<()> {
-    engine.unignore_peer(&node_id)?;
-    emit_view(&app, &engine);
-    Ok(())
-}
-
-#[tauri::command]
 pub fn set_machine_preferences(
     app: AppHandle,
     engine: EngineState,

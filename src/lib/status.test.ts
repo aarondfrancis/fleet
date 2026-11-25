@@ -27,8 +27,7 @@ describe("status labels", () => {
     // A runner that isn't installed yet isn't "idle": the machine's state shows instead.
     expect(machineSummary(byName["mac-mini-03"])).toBe("Error");
     expect(machineSummary(byName["win-builder"])).toBe("Offline");
-    const laptop = view.otherMachines.find((m) => m.displayName === "dev-laptop")!;
-    expect(machineStatus(laptop.connection).label).toBe("Checking…");
+    expect(machineStatus({ kind: "pending" }).label).toBe("Checking…");
   });
 
   it("maps runner activity", () => {

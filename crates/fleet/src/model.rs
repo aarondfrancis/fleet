@@ -17,8 +17,6 @@ use ts_rs::TS;
 pub struct AppConfig {
     #[serde(default)]
     pub orgs: Vec<OrgConfig>,
-    #[serde(default)]
-    pub ignored_peers: Vec<IgnoredPeer>,
     /// Personal labels, keyed by inventory host or Tailscale node identity.
     #[serde(default)]
     pub machine_preferences: BTreeMap<String, MachinePreferences>,
@@ -41,7 +39,6 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             orgs: Vec::new(),
-            ignored_peers: Vec::new(),
             machine_preferences: BTreeMap::new(),
             desktop_notifications: false,
             demo_mode: false,
@@ -74,9 +71,13 @@ pub(crate) fn inventory_machine_key(host_id: &str) -> String {
     format!("inv:{host_id}")
 }
 
-/// A machine's key for a tailnet peer outside the inventory: `ts:<node id>`.
+/// A machine's key for an inventory host matched to its tailnet peer: `ts:<node id>`.
 pub(crate) fn tailnet_machine_key(node_id: &str) -> String {
     format!("ts:{node_id}")
+}
+
+pub(crate) fn is_tailnet_machine_key(key: &str) -> bool {
+    key.starts_with("ts:")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, schemars::JsonSchema)]
@@ -140,15 +141,6 @@ pub enum RepoScope {
     None,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, schemars::JsonSchema)]
-#[ts(export)]
-#[serde(rename_all = "camelCase")]
-pub struct IgnoredPeer {
-    pub tailscale_node_id: String,
-    pub name: String,
-    pub ignored_at: DateTime<Utc>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Timed<T> {
     pub at: DateTime<Utc>,
@@ -167,7 +159,7 @@ pub struct Observations {
     pub tailscale_error: Option<Timed<String>>,
     /// Keyed by org login (lowercase).
     pub github: BTreeMap<String, OrgObservation>,
-    /// Keyed by [`inventory_machine_key`] or [`tailnet_machine_key`].
+    /// Keyed by [`inventory_machine_key`].
     pub machines: BTreeMap<String, MachineObservation>,
     /// The runner-up coordinator, when the inventory names one.
     pub pools: Option<PoolsObservation>,
@@ -209,14 +201,6 @@ pub struct TailnetPeer {
 }
 
 impl TailnetPeer {
-    /// Desktop/server OSes that can host GitHub runners.
-    pub fn can_host_runners(&self) -> bool {
-        matches!(
-            self.os.to_ascii_lowercase().as_str(),
-            "macos" | "linux" | "windows" | "freebsd" | "openbsd"
-        )
-    }
-
     pub fn address(&self) -> String {
         self.dns_name
             .clone()
@@ -294,7 +278,7 @@ pub struct RateLimit {
 #[derive(Debug, Clone)]
 pub struct MachineObservation {
     /// Exact collection configuration, so edited hosts never inherit old facts.
-    pub target: crate::machine::MachineTarget,
+    pub target: crate::desired::model::Host,
     pub report: Option<Timed<MachineReport>>,
     /// Outcome of the most recent attempt; None when it succeeded.
     pub last_error: Option<Timed<String>>,
@@ -317,13 +301,12 @@ pub struct FleetView {
     pub summary: FleetSummary,
     /// Shared attention findings; summary.attention is this collection’s length.
     pub issues: Vec<crate::issues::FleetIssue>,
-    /// Runner machines: in the inventory or with runners.
+    /// The inventory's hosts. Nothing outside the inventory is a machine.
     pub machines: Vec<MachineView>,
-    /// Other tailnet machines that could host runners (none of the above).
-    pub other_machines: Vec<MachineView>,
     /// GitHub runners not tied to any machine (e.g. hosted runner pools).
     pub unmatched_runners: Vec<RunnerView>,
-    pub ignored: Vec<DiscoveredPeerView>,
+    /// Tailnet devices no inventory host claims, offered by Add machine. Never contacted.
+    pub tailnet_devices: Vec<crate::add_machine::TailnetDeviceView>,
     pub queue: QueueView,
     /// Desired state from `inventory/fleet.toml`: errors, last check, the current change.
     pub plan: crate::fleet_plan::FleetPlanStatus,
@@ -518,14 +501,6 @@ pub struct JobView {
     pub started_at: Option<DateTime<Utc>>,
     pub html_url: Option<String>,
     pub labels: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, schemars::JsonSchema)]
-#[ts(export)]
-#[serde(rename_all = "camelCase")]
-pub struct DiscoveredPeerView {
-    pub peer: TailnetPeer,
-    pub ignored_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS, schemars::JsonSchema)]

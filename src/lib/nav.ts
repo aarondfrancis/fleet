@@ -10,7 +10,7 @@ export type Selection =
   | { kind: "retiring" }
   | { kind: "machine"; id: string }
   | { kind: "runner"; key: string }
-  | { kind: "ignored" };
+  | { kind: "add-machine" };
 
 export function selectionId(s: Selection): string {
   switch (s.kind) {
@@ -18,7 +18,7 @@ export function selectionId(s: Selection): string {
     case "queue":
     case "moving":
     case "retiring":
-    case "ignored":
+    case "add-machine":
       return s.kind;
     case "machine":
       return `machine:${s.id}`;
@@ -37,17 +37,10 @@ interface NavItem {
 export interface OpenGroups {
   /** Runners GitHub lists that aren't on any machine. */
   unlinked: boolean;
-  /** Tailnet machines without runners. */
-  other: boolean;
-}
-
-/** Every machine: runner machines, then other tailnet machines. */
-export function allMachines(view: FleetView): MachineView[] {
-  return [...view.machines, ...view.otherMachines];
 }
 
 export function findMachine(view: FleetView, id: string | null): MachineView | undefined {
-  return id ? allMachines(view).find((m) => m.id === id) : undefined;
+  return id ? view.machines.find((m) => m.id === id) : undefined;
 }
 
 /** Every runner: those on machines, then those not linked to one. */
@@ -73,9 +66,8 @@ export function filterNavView(view: FleetView, query: string): FleetView {
       const runners = m.runners.filter(runnerMatches);
       return runners.length ? [{ ...m, runners }] : [];
     }),
-    otherMachines: view.otherMachines.filter(machineMatches),
     unmatchedRunners: view.unmatchedRunners.filter(runnerMatches),
-    ignored: view.ignored.filter((m) => matches([m.peer.hostname, m.peer.dnsName])),
+    tailnetDevices: view.tailnetDevices.filter((d) => matches([d.name])),
   };
 }
 
@@ -92,10 +84,7 @@ export function flattenNav(view: FleetView, collapsed: ReadonlySet<string>, open
   if (open.unlinked) {
     for (const r of view.unmatchedRunners) items.push({ selection: { kind: "runner", key: r.key } });
   }
-  if (open.other) {
-    for (const m of view.otherMachines) items.push({ selection: { kind: "machine", id: m.id } });
-  }
-  if (view.ignored.length > 0) items.push({ selection: { kind: "ignored" } });
+  if (view.tailnetDevices.length > 0) items.push({ selection: { kind: "add-machine" } });
   return items;
 }
 
@@ -108,15 +97,15 @@ export function moveSelection(items: NavItem[], current: Selection, delta: 1 | -
   return items[next].selection;
 }
 
-/** If the selected thing disappeared (a removed or ignored machine), fall back sensibly. */
+/** If the selected thing disappeared (a machine removed from the inventory), fall back sensibly. */
 export function reconcileSelection(view: FleetView, s: Selection): Selection {
   switch (s.kind) {
     case "machine":
       return findMachine(view, s.id) ? s : { kind: "overview" };
     case "runner":
       return findRunner(view, s.key) ? s : { kind: "overview" };
-    case "ignored":
-      return view.ignored.length > 0 ? s : { kind: "overview" };
+    case "add-machine":
+      return view.tailnetDevices.length > 0 ? s : { kind: "overview" };
     case "moving":
     case "retiring":
       return view.rollout.length > 0 ? s : { kind: "overview" };

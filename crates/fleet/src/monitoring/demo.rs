@@ -5,7 +5,7 @@ use crate::model::{FleetView, inventory_machine_key};
 use chrono::{DateTime, Duration, Utc};
 
 pub(crate) fn attach(view: &mut FleetView, now: DateTime<Utc>) {
-    for machine in view.machines.iter_mut().chain(&mut view.other_machines) {
+    for machine in &mut view.machines {
         let key = machine.preferences_key();
         machine.monitoring.machine_key.clone_from(&key);
         let mut add = |minutes, kind, detail: String| {
@@ -54,7 +54,7 @@ pub(crate) fn attach(view: &mut FleetView, now: DateTime<Utc>) {
         event.id = format!("{:020}", index + 1);
     }
     view.monitoring.events.reverse();
-    for machine in view.machines.iter_mut().chain(&mut view.other_machines) {
+    for machine in &mut view.machines {
         machine.monitoring.events = view
             .monitoring
             .events

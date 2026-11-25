@@ -94,7 +94,7 @@ describe("which pages show a change", () => {
   it("matches host changes by inventory host, including a host-wide apply on each runner", () => {
     const apply = { kind: "apply", host: "studio", runner: null } as const;
     expect(requestTargetsMachine(apply, machine("studio"))).toBe(true);
-    expect(requestTargetsMachine(apply, view.otherMachines[0])).toBe(false);
+    expect(requestTargetsMachine(apply, machine("build-linux-01"))).toBe(false);
     expect(requestTargetsRunner(apply, runner("studio-2"))).toBe(true);
     expect(requestTargetsRunner({ ...apply, runner: "studio-1" }, runner("studio-2"))).toBe(false);
     expect(requestTargetsRunner({ kind: "decommission", host: "build-linux-01", runner: "linux-01-b" }, runner("linux-01-b"))).toBe(true);

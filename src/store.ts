@@ -29,7 +29,7 @@ export const useUi = create<UiStore>((set, get) => ({
   query: "",
   setQuery: (query) => set({ query }),
   collapsed: loadCollapsed(),
-  open: { unlinked: false, other: false },
+  open: { unlinked: false },
   select: (selection) => set({ selection }),
   toggleCollapsed: (id, collapse) => {
     const next = new Set(get().collapsed);

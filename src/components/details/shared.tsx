@@ -11,9 +11,24 @@ import { busySince, runnerAsOf, runnerStatus } from "../../lib/status";
 import { commands } from "../../lib/tauri";
 import { findMachine } from "../../lib/nav";
 import { useUi } from "../../store";
-import { Card, Elapsed, ErrorText, Meter, Stat, StatStrip, StatusDot, toneVar } from "../ui";
+import { Callout, Card, Elapsed, ErrorText, Meter, Stat, StatStrip, StatusDot, toneVar } from "../ui";
 import { Icon } from "../icons";
 import { CopyValue } from "../CopyValue";
+
+/** Machines come only from the inventory, so a failed load explains the empty fleet on the first screen. */
+export function InventoryProblem({ view }: { view: FleetView }) {
+  const p = view.plan;
+  if (!p.inventoryError) return null;
+  return (
+    <Callout tone="bad" title="The inventory couldn't be loaded, so no machines are shown">
+      <div>{p.inventoryError}</div>
+      <div className="mt-1">
+        Inventory: <CopyValue value={p.inventoryPath} label="Inventory path" className="font-mono" />
+      </div>
+      <div className="mt-1">Create or fix this file. The app reads it again when it changes.</div>
+    </Callout>
+  );
+}
 
 export function PageHeader({
   title,

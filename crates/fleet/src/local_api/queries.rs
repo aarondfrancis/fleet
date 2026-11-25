@@ -23,15 +23,6 @@ impl<S: Send + Sync, T: DeserializeOwned + Send> FromRequestParts<S> for Paramet
 #[serde(deny_unknown_fields)]
 pub(super) struct NoQuery {}
 
-#[derive(Debug, Default, Clone, Copy, Deserialize, Serialize, schemars::JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub(super) enum MachineScope {
-    #[default]
-    All,
-    Fleet,
-    Discovered,
-}
-
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub(super) enum Connection {
@@ -79,8 +70,6 @@ impl Activity {
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(super) struct MachineQuery {
-    #[serde(default)]
-    pub scope: MachineScope,
     pub os: Option<crate::machine::OsFamily>,
     pub connection: Option<Connection>,
     pub q: Option<String>,
@@ -176,7 +165,7 @@ pub(super) fn page<T>(
 }
 
 pub(super) fn resolve_machine<'a>(view: &'a FleetView, id: &str) -> Result<&'a MachineView, ApiError> {
-    let machines = || view.machines.iter().chain(&view.other_machines);
+    let machines = || view.machines.iter();
     if let Some(machine) = machines().find(|m| m.id == id) {
         return Ok(machine);
     }
@@ -218,7 +207,6 @@ pub(super) struct FlatRunner {
 pub(super) fn flat_runners(view: &FleetView) -> Vec<FlatRunner> {
     view.machines
         .iter()
-        .chain(&view.other_machines)
         .flat_map(|m| {
             m.runners.iter().map(|r| FlatRunner {
                 machine_name: Some(m.display_name.clone()),
